@@ -3,58 +3,85 @@ if (typeof window !== 'undefined' && !window.Buffer){
     require('../vendor/browser-buffer');
 }
 
-var extend = require('util')._extend;
-
-var MicroSerializer = function(){
-    this._schemas = [];
-    this._indexMap = {};
+var MicroSerializer = function(maxBufferLength){
+    this.maxBufferLength = maxBufferLength || 1024;
+    this._schemaData = {};
+    this._typeIndices = [];
 };
 
 
-MicroSerializer.prototype.register = function(name, schema, index){
+MicroSerializer.prototype.register = function(name, schema, options){
 
-    /*var maxSchemas = Math.pow(2,schemaBits);
+    options = options || {};
+    options.serializeType = (typeof options.serializeType === 'boolean') ? options.serializeType : true;
+    options.typeIndex = (typeof options.typeIndex == 'number') ? options.index : this._typeIndices.length;
 
-    if (this._schemas.length >= maxSchemas){
-        throw new Error("Maximum number of allowed schemas ("+maxSchemas+") reached. To allow for more schemas, try increasing MicroSerializer's 'schemaBits' property");
-    }    */
+    this._schemaData[name] = {
+        schema : parseSchema.call(this,schema),
+        serializeType:options.serializeType,
+        typeIndex : options.typeIndex
+    };
 
-    if (this._indexMap.hasOwnProperty(name)){
-        var oldIndex = this._indexMap[name];
-        this._schemas[oldIndex] = undefined;
-        delete this._indexMap[name];
+    if (options.serializeType){
+        this._typeIndices[options.typeIndex] = name;
+    }
+};
+
+MicroSerializer.prototype.getSchema = function(schemaName){
+    var schemaData = this._schemaData[schemaName];
+    return schemaData ? schemaData.schema : null;
+};
+
+MicroSerializer.prototype.serialize = function(schemaName, data, maxByteLength){
+
+    var schemaData = this._schemaData[schemaName];
+    if (!schemaData){
+        throw new Error("No Schema with name: '"+schemaName+'" has been registered.')
     }
 
-    index = index || this._schemas.length;
-    this._indexMap[name] = index;
-    this._schemas[index] = parseSchema.call(this,schema);
-};
+    var buffer = writeToBuffer.call(this,schemaData.schema, data, maxByteLength);
 
-MicroSerializer.prototype.getSchema = function(name){
-    return this._schemas[this._indexMap[name]];
-};
-
-MicroSerializer.prototype.serialize = function(name, data, maxByteLength){
-
-    var schemaIndex = this._indexMap[name],
-        schema = this._schemas[schemaIndex];
-
-    if (!schema){
-        throw new Error("No Schema with name: '"+name+'" has been registered.')
+    if (schemaData.serializeType){
+        buffer = Buffer.concat([new Buffer([schemaData.typeIndex]), buffer])
     }
 
-    var buffer = writeToBuffer(schema, data, maxByteLength);
-    return Buffer.concat([new Buffer([schemaIndex]), buffer]);
+    return buffer;
 };
 
-MicroSerializer.prototype.deserialize = function(buffer){
+MicroSerializer.prototype.deserialize = function(buffer, schemaName){
 
-    var schemaIndex = buffer.readUInt8(0),
-        schema = this._schemas[schemaIndex],
-        schemaName = Object.keys(this._indexMap)[schemaIndex];
+    var schemaData;
 
-    var data = parseSchemaFromBuffer.call(this, buffer, schema, 1).value;
-    data._type = schemaName;
+    if (schemaName){
+
+        schemaData = this._schemaData[schemaName];
+
+        if (!schemaData){
+            throw new Error("Could not find a registered schema with name: '"+schemaName+'"');
+        }
+
+        if (schemaData.serializeType){
+
+            if (schemaData.typeIndex !== buffer[0]){
+                throw new Error("Serialized type index derived from binary data ("+buffer[0]+") does not match that for '"+schemaName+"' ("+schemaData.typeIndex+")");
+            }
+
+            buffer = buffer.slice(1);
+        }
+    }
+    else{
+        schemaName = this._typeIndices[buffer[0]];
+
+        if (!schemaName){
+            throw new Error("Could not derive a matching registered schema from the binary data");
+        }
+
+        schemaData = this._schemaData[schemaName];
+        buffer = buffer.slice(1);
+    }
+
+    var data = readFromBuffer.call(this, schemaData.schema, buffer);
+    data._packet.type = schemaName;
 
     return data;
 };
@@ -83,6 +110,8 @@ function parseProperty(property){
 
 
     if (typeof property === 'string'){
+
+        property = property.toLowerCase();
 
         switch (property){
             case 'int8':
@@ -123,7 +152,7 @@ function parseProperty(property){
                 break;
 
             case 'ufloat8':
-                property = {type:'int', byteLength:1, unsigned:true, precision:1};
+                property = {type:'float', byteLength:1, unsigned:true, precision:1};
                 break;
 
             case 'float16':
@@ -131,7 +160,7 @@ function parseProperty(property){
                 break;
 
             case 'ufloat16':
-                property = {type:'int', byteLength:2, unsigned:true, precision:1};
+                property = {type:'float', byteLength:2, unsigned:true, precision:1};
                 break;
 
             case 'float32':
@@ -141,10 +170,9 @@ function parseProperty(property){
 
             case 'ufloat32':
             case 'ufloat':
-                property = {type:'int', byteLength:4, unsigned:true, precision:2};
+                property = {type:'float', byteLength:4, unsigned:true, precision:2};
                 break;
 
-            case 'number':
             case 'float64':
             case 'double':
                 property = {type:'float', byteLength:8};
@@ -159,9 +187,15 @@ function parseProperty(property){
         }
     }
     else if (Array.isArray(property)){
-        if (!property.length) property[0] = null;
         property = {type:'array', element:property[0]};
     }
+    else{
+        if (!property.type){
+            throw new Error("No type specified for schema attribute");
+        }
+        property.type = property.type.toLowerCase();
+    }
+
 
     switch (property.type){
         case 'int':
@@ -188,17 +222,28 @@ function parseProperty(property){
 
             property.element = parseProperty(property.element);
             property.defaultValue = property.defaultValue || [];
-
-            if (!property.arrayLength && property.byteLength){
-
+            if (property.byteLength){
                 if (property.element.byteLength){
-                    property.arrayLength = Math.floor(property.byteLength/property.element.byteLength);
-                }
 
-                if (!property.arrayLength){
-                    throw new Error("Could not calculate arrays default length given from the 'byteLength' attributes, please specify an 'arrayLength' attribute instead");
+                    property.maxElements= property.byteLength/property.element.byteLength;
+
+                    if (property.maxElements%1 !== 0){
+                        throw new Error("Schema array byte length ("+property.byteLength+") is not a multiple of its element's byte length ("+property.element.byteLength+")");
+                    }
                 }
+                else{
+                    property.maxElements = property.byteLength;
+                }
+            }else{
+                property.maxElements = property.maxElements || 128;
             }
+
+            //Create a dummy array schema (used for serializing and deserialzing)
+            property.schema = [];
+            for (var i = 0; i < property.maxElements; i++){
+               property.schema.push({name:i},property.element);
+            }
+
             break;
 
         case 'object':
@@ -219,7 +264,7 @@ function parseProperty(property){
 
 function writeToBuffer(schema, data, maxByteLength){
 
-    maxByteLength = maxByteLength || 1024;
+    maxByteLength = maxByteLength || this.maxBufferLength;
 
     var buffer = new Buffer(maxByteLength),
         offset = 0;
@@ -231,14 +276,16 @@ function writeToBuffer(schema, data, maxByteLength){
         }
 
         var property = schema[i],
-            value = data[property.name] || property.defaultValue;
+            type = property.type,
+            byteLength = property.byteLength,
+            value = data[property.name] || property.defaultValue
 
-        switch (property.type){
+        switch (type){
 
             case "int" :
             case "float" :
 
-                if (property.type == "int"){
+                if (type == "int"){
                     value = Math.round(value);
                 }
                 else if (property.precision){
@@ -246,7 +293,7 @@ function writeToBuffer(schema, data, maxByteLength){
                     value = Math.round(value);
                 }
 
-                switch (property.byteLength){
+                switch (byteLength){
                     case 1:
                         property.unsigned ? buffer.writeUInt8(value, offset) : buffer.writeInt8(value,offset);
                         break;
@@ -264,11 +311,9 @@ function writeToBuffer(schema, data, maxByteLength){
                         break;
                 }
 
-                offset += property.byteLength;
                 break;
 
             case "string" :
-                var byteLength = property.byteLength;
 
                 if (!byteLength){
                     byteLength = Buffer.byteLength(value, property.encoding);
@@ -277,23 +322,20 @@ function writeToBuffer(schema, data, maxByteLength){
                 }
 
                 buffer.write(value, offset, byteLength, property.encoding);
-                offset += byteLength;
                 break;
 
             case "array":
-                var arraySchema = [];
-                for (var j=0; j < value.length; j++){
-                    arraySchema.push({name:j},property.element);
-                }
 
-                var arrayBuffer = writeToBuffer.call(this, arraySchema, value, property.byteLength);
+                var arraySchema = value.length < property.maxElements ? property.schema.slice(0, value.length) : property.schema,
+                    arrayBuffer = writeToBuffer.call(this, arraySchema, value, byteLength);
 
-                if (!property.byteLength){
-                   buffer.writeUInt8(property.byteLength);
+                if (!byteLength){
+                   byteLength = arrayBuffer.length;
+                   buffer.writeUInt8(byteLength);
                    offset++;
                 }
+
                 arrayBuffer.copy(buffer, offset);
-                offset += property.byteLength || arrayBuffer.length;
                 break;
 
             case "object":
@@ -302,49 +344,124 @@ function writeToBuffer(schema, data, maxByteLength){
                     throw new Error("Object schema: '"+property.schema + "' has not been registered.");
                 }
 
-                var objectBuffer = writeToBuffer.call(this, objectSchema, value, property.byteLength);
+                var objectBuffer = writeToBuffer.call(this, objectSchema, value, byteLength);
+
+                if (!byteLength){
+                    byteLength = objectBuffer.length;
+                }
+
                 objectBuffer.copy(buffer, offset);
-                offset += property.byteLength || objectBuffer.length;
                 break;
         }
-    }
 
+        offset += byteLength;
+    }
 
     if (offset < maxByteLength){
         buffer = buffer.slice(0, offset);
     }
 
-
     return buffer;
 }
 
-function parseSchemaFromBuffer(buffer, schema, offset, maxByteLength){
-    offset = offset || 0;
-    maxByteLength = maxByteLength || buffer.length-offset;
+function readFromBuffer(schema, buffer, data){
 
-    var value = {}, currentByteLength = 0;
+    data = data || {_packet:{}};
+
+    console.log("Buffer :"+buffer.toJSON());
+
+    var maxByteLength = buffer.length,
+        offset = 0;
 
     for (var i=0; i < schema.length; i++){
-         if (currentByteLength >= maxByteLength){
-             break;
-         }
 
-         var property = schema[i],
-             dataObject = parsePropertyFromBuffer.call(this, buffer, property, offset+currentByteLength);
-
-        currentByteLength += dataObject.byteLength;
-
-        if (currentByteLength <= maxByteLength){
-
-            value[property.name] = dataObject.value;
-        }
-        else{
+        if (offset >= maxByteLength){
             break;
         }
 
+        var property = schema[i],
+            type = property.type,
+            byteLength = property.byteLength,
+            value = undefined;
+
+        switch (type){
+
+            case "int" :
+            case "float":
+
+                switch (byteLength){
+                    case 1:
+                        value = property.unsigned ? buffer.readUInt8(offset) : buffer.readInt8(offset);
+                        break;
+
+                    case  2:
+                        value = property.unsigned ? buffer.readUInt16BE(offset) : buffer.readInt16BE(offset);
+                        break;
+
+                    case 4:
+                        value = property.unsigned ? buffer.readUInt32BE(offset) : buffer.readInt32BE(offset);
+                        break;
+
+                    case 8:
+                        value = buffer.readDoubleBE(offset);
+                        break;
+                }
+
+
+                if (type == "float" && property.precision){
+                    value /= (Math.pow(10,property.precision));
+                }
+                break;
+
+            case "string" :
+
+                if (!byteLength){
+                    byteLength = buffer.readUInt8(offset);
+                    offset++;
+                }
+
+                value = buffer.toString(property.encoding, offset, offset+byteLength);
+
+                break;
+
+            case "array":
+                if (!byteLength){
+                    byteLength =  buffer.readUInt8(offset);
+                    offset++;
+                }
+
+                var arrayBuffer = buffer.slice(offset, offset+byteLength);
+                value = readFromBuffer.call(this, property.schema, arrayBuffer, []);
+
+                break;
+
+            case "object":
+                var objectSchema = this.getSchema(property.schema);
+
+                if (!objectSchema){
+                    throw new Error("Object schema: '"+property.schema + "' has not been registered.");
+                }
+
+                var objectBuffer = buffer.slice(offset, byteLength);
+                value = readFromBuffer.call(this, property.schema, objectBuffer);
+
+                if (!byteLength){
+                    byteLength = value._packet.byteLength;
+                }
+
+                break;
+
+        }
+
+        data[property.name] = value;
+        offset += byteLength;
     }
 
-    return {value:value, byteLength:Math.min(currentByteLength,maxByteLength)};
+    if (data._packet){
+        data._packet.byteLength = offset;
+    }
+
+    return data;
 }
 
 function parsePropertyFromBuffer(buffer, property, offset){
@@ -352,80 +469,6 @@ function parsePropertyFromBuffer(buffer, property, offset){
     offset = offset || 0;
 
     var value, byteLength = 0;
-
-
-    switch (property.type){
-
-        case "int" :
-        case "float":
-
-            switch (property.byteLength){
-                case 1:
-                    value = property.unsigned ? buffer.readUInt8(offset) : buffer.readInt8(offset);
-                    break;
-
-                case  2:
-                    value = property.unsigned ? buffer.readUInt16BE(offset) : buffer.readInt16BE(offset);
-                    break;
-
-                case 4:
-                    value = property.unsigned ? buffer.readUInt32BE(offset) : buffer.readInt32BE(offset);
-                    break;
-
-                case 8:
-                    value = buffer.readDoubleBE(offset);
-                    break;
-            }
-
-
-            if (property.type == "float" && property.precision){
-               value /= (Math.pow(10,property.precision));
-            }
-
-            byteLength = property.byteLength;
-            break;
-
-        case "string" :
-
-            var stringByteLength = property.byteLength;
-
-            if (!stringByteLength){
-                stringByteLength = buffer.readUInt8(offset);
-                byteLength++;
-                offset++;
-            }
-
-            value = buffer.toString(property.encoding, offset, offset+stringByteLength);
-            byteLength+=stringByteLength;
-
-            break;
-
-        case "array":
-            value = [];
-
-            var arrayLength = property.arrayLength;
-            if (!arrayLength){
-                arrayLength =  buffer.readUInt8(offset);
-                byteLength++;
-            }
-
-            for (var i=0; i < arrayLength; i++){
-                var elementDataObject = parsePropertyFromBuffer.call(this, buffer, offset+byteLength);
-                byteLength += elementDataObject.byteLength;
-                value.push.apply(value, elementDataObject.value);
-            }
-
-            break;
-
-        case "object":
-            var schema = this.getSchema(property.schema);
-
-            if (!schema){
-                throw new Error("Object schema: '"+property.schema + "' has not been registered.");
-            }
-
-            return parseSchemaFromBuffer.call(this, buffer, schema, offset, property.byteLength);
-    }
 
     return {value:value, byteLength:byteLength};
 }

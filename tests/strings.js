@@ -12,7 +12,7 @@ var stringData = {
     ascii : "frank",
     char : 'frank',
     len3 : "frank"
-}
+};
 
 var stringBuffer, newStringData;
 
@@ -20,7 +20,7 @@ var stringBuffer, newStringData;
 exports.testRegisterSchema = function(test){
 
     test.doesNotThrow(function(){
-        micro.register("String",stringSchema);
+        micro.register("String",stringSchema,{serializeType:false});
         test.ok(micro.getSchema("String"), "String schema not found");
     });
 
@@ -31,7 +31,7 @@ exports.testSerialize = function(test){
 
     test.doesNotThrow(function(){
         stringBuffer = micro.serialize("String",stringData);
-        test.equals(stringBuffer.length, 17, "String buffer has incorrect length");
+        test.equals(stringBuffer.length, 16, "String buffer has incorrect length");
     });
 
     test.done();
@@ -41,9 +41,7 @@ exports.testDeserialize = function(test){
 
     test.doesNotThrow(function(){
 
-        newStringData = micro.deserialize(stringBuffer);
-
-
+        newStringData = micro.deserialize(stringBuffer, "String");
 
         for (var key in stringData){
             if (stringData.hasOwnProperty(key)){
@@ -71,9 +69,9 @@ exports.testSerializePartial = function(test){
         delete stringData.ascii;
 
         stringBuffer = micro.serialize("String",stringData,7);
-        test.equals(stringBuffer.length, 8, "String Buffer has incorrect length");
+        test.equals(stringBuffer.length, 7, "String Buffer has incorrect length");
 
-        newStringData = micro.deserialize(stringBuffer);
+        newStringData = micro.deserialize(stringBuffer, "String");
 
         test.equals(Object.keys(newStringData).length, 3, "Partial String Data has incorrect number of keys");
         test.equals(newStringData.ascii,"", "Default value for 'ascii' is incorrect");

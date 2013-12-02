@@ -26,7 +26,7 @@ var floatData = {
     float16 : -Math.PI,
     float32 : Math.PI,
     double : Math.PI
-}
+};
 
 var integerBuffer, floatBuffer, newIntegerData, newFloatData;
 
@@ -34,8 +34,8 @@ var integerBuffer, floatBuffer, newIntegerData, newFloatData;
 exports.testRegisterSchema = function(test){
 
     test.doesNotThrow(function(){
-        micro.register("Integer",integerSchema);
-        micro.register("Float", floatSchema);
+        micro.register("Integer",integerSchema,{serializeType:false});
+        micro.register("Float", floatSchema,{serializeType:false});
 
         test.ok(micro.getSchema("Integer"), "Integer schema not found");
         test.ok(micro.getSchema("Float"), "Float schema not found");
@@ -49,8 +49,8 @@ exports.testSerialize = function(test){
     test.doesNotThrow(function(){
         integerBuffer = micro.serialize("Integer",integerData);
         floatBuffer =  micro.serialize("Float",floatData);
-        test.equals(integerBuffer.length, 12, "Integer buffer has incorrect length");
-        test.equals(floatBuffer.length, 16, "Float buffer has incorrect length");
+        test.equals(integerBuffer.length, 11, "Integer buffer has incorrect length");
+        test.equals(floatBuffer.length, 15, "Float buffer has incorrect length");
     });
 
     test.done();
@@ -60,12 +60,12 @@ exports.testDeserialize = function(test){
 
     test.doesNotThrow(function(){
 
-        newIntegerData = micro.deserialize(integerBuffer);
-        newFloatData = micro.deserialize(floatBuffer);
+        newIntegerData = micro.deserialize(integerBuffer, "Integer");
+        newFloatData = micro.deserialize(floatBuffer, "Float");
 
         var key;
 
-        for (var key in integerData){
+        for (key in integerData){
             if (integerData.hasOwnProperty(key)){
                 if (newIntegerData.hasOwnProperty(key)){
                     test.equals(Math.round(integerData[key]), Math.round(newIntegerData[key]), "Deserialized data value for key: '"+key+"' does not equal old value");
@@ -75,7 +75,7 @@ exports.testDeserialize = function(test){
             }
         }
 
-        for (var key in floatData){
+        for (key in floatData){
             if (floatData.hasOwnProperty(key)){
                 if (newFloatData.hasOwnProperty(key)){
                     test.equals(Math.round(floatData[key]), Math.round(newFloatData[key]), "Deserialized data value for key: '"+key+"' does not equal old value");
@@ -106,15 +106,15 @@ exports.testSerializePartial = function(test){
     test.doesNotThrow(function(){
 
         integerBuffer = micro.serialize("Integer",integerData);
-        test.equals(integerBuffer.length, 12, "Integer Buffer has incorrect length");
+        test.equals(integerBuffer.length, 11, "Integer Buffer has incorrect length");
 
-        newIntegerData = micro.deserialize(integerBuffer);
+        newIntegerData = micro.deserialize(integerBuffer, "Integer");
         test.equals(newIntegerData.short,integerSchema.short.defaultValue, "Default value for 'short' is incorrect");
 
         floatBuffer = micro.serialize("Float",floatData,3);
-        test.equals(floatBuffer.length, 4, "Float Buffer has incorrect length");
+        test.equals(floatBuffer.length, 3, "Float Buffer has incorrect length");
 
-        newFloatData = micro.deserialize(floatBuffer);
+        newFloatData = micro.deserialize(floatBuffer, "Float");
         test.equals(Object.keys(newFloatData).length,3, "New Float Data has incorrect number of properties");
 
     });
