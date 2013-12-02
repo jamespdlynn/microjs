@@ -1,0 +1,85 @@
+var micro = require("../");
+
+var stringSchema = {
+    basic : 'string',
+    ascii : {type:'string', encoding:'ascii'},
+    char : 'char',
+    len3 : {type:'string', byteLength:3, defaultValue:"bob"}
+};
+
+var stringData = {
+    basic : "frank",
+    ascii : "frank",
+    char : 'frank',
+    len3 : "frank"
+}
+
+var stringBuffer, newStringData;
+
+
+exports.testRegisterSchema = function(test){
+
+    test.doesNotThrow(function(){
+        micro.register("String",stringSchema);
+        test.ok(micro.getSchema("String"), "String schema not found");
+    });
+
+    test.done();
+};
+
+exports.testSerialize = function(test){
+
+    test.doesNotThrow(function(){
+        stringBuffer = micro.serialize("String",stringData);
+        test.equals(stringBuffer.length, 17, "String buffer has incorrect length");
+    });
+
+    test.done();
+};
+
+exports.testDeserialize = function(test){
+
+    test.doesNotThrow(function(){
+
+        newStringData = micro.deserialize(stringBuffer);
+
+
+
+        for (var key in stringData){
+            if (stringData.hasOwnProperty(key)){
+                if (!newStringData.hasOwnProperty(key)){
+                    test.ok(false, "Deserialized data does not have value for key: '"+key+"'");
+                }
+            }
+        }
+
+        test.equals(newStringData.basic, "frank");
+        test.equals(newStringData.ascii, "frank");
+        test.equals(newStringData.char, "f");
+        test.equals(newStringData.len3, "fra");
+
+
+    });
+
+    test.done();
+}
+
+exports.testSerializePartial = function(test){
+
+    test.doesNotThrow(function(){
+
+        delete stringData.ascii;
+
+        stringBuffer = micro.serialize("String",stringData,7);
+        test.equals(stringBuffer.length, 8, "String Buffer has incorrect length");
+
+        newStringData = micro.deserialize(stringBuffer);
+
+        test.equals(Object.keys(newStringData).length, 3, "Partial String Data has incorrect number of keys");
+        test.equals(newStringData.ascii,"", "Default value for 'ascii' is incorrect");
+
+    });
+
+    test.done();
+};
+
