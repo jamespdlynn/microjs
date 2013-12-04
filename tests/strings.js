@@ -30,7 +30,7 @@ exports.testRegisterSchema = function(test){
 exports.testSerialize = function(test){
 
     test.doesNotThrow(function(){
-        stringBuffer = micro.serialize("String",stringData);
+        stringBuffer = micro.toBinary(stringData,"String");
         test.equals(stringBuffer.length, 16, "String buffer has incorrect length");
     });
 
@@ -41,7 +41,7 @@ exports.testDeserialize = function(test){
 
     test.doesNotThrow(function(){
 
-        newStringData = micro.deserialize(stringBuffer, "String");
+        newStringData = micro.toJSON(stringBuffer, "String");
 
         for (var key in stringData){
             if (stringData.hasOwnProperty(key)){
@@ -68,10 +68,10 @@ exports.testSerializePartial = function(test){
 
         delete stringData.ascii;
 
-        stringBuffer = micro.serialize("String",stringData,7);
+        stringBuffer = micro.toBinary(stringData,"String",7);
         test.equals(stringBuffer.length, 7, "String Buffer has incorrect length");
 
-        newStringData = micro.deserialize(stringBuffer, "String");
+        newStringData = micro.toJSON(stringBuffer, "String");
 
         test.equals(Object.keys(newStringData).length, 3, "Partial String Data has incorrect number of keys");
         test.equals(newStringData.ascii,"", "Default value for 'ascii' is incorrect");

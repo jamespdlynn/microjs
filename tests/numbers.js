@@ -47,8 +47,8 @@ exports.testRegisterSchema = function(test){
 exports.testSerialize = function(test){
 
     test.doesNotThrow(function(){
-        integerBuffer = micro.serialize("Integer",integerData);
-        floatBuffer =  micro.serialize("Float",floatData);
+        integerBuffer = micro.toBinary(integerData, "Integer");
+        floatBuffer =  micro.toBinary(floatData, "Float");
         test.equals(integerBuffer.length, 11, "Integer buffer has incorrect length");
         test.equals(floatBuffer.length, 15, "Float buffer has incorrect length");
     });
@@ -60,8 +60,8 @@ exports.testDeserialize = function(test){
 
     test.doesNotThrow(function(){
 
-        newIntegerData = micro.deserialize(integerBuffer, "Integer");
-        newFloatData = micro.deserialize(floatBuffer, "Float");
+        newIntegerData = micro.toJSON(integerBuffer, "Integer");
+        newFloatData = micro.toJSON(floatBuffer, "Float");
 
         var key;
 
@@ -105,16 +105,16 @@ exports.testSerializePartial = function(test){
 
     test.doesNotThrow(function(){
 
-        integerBuffer = micro.serialize("Integer",integerData);
+        integerBuffer = micro.toBinary(integerData,"Integer");
         test.equals(integerBuffer.length, 11, "Integer Buffer has incorrect length");
 
-        newIntegerData = micro.deserialize(integerBuffer, "Integer");
+        newIntegerData = micro.toJSON(integerBuffer, "Integer");
         test.equals(newIntegerData.short,integerSchema.short.defaultValue, "Default value for 'short' is incorrect");
 
-        floatBuffer = micro.serialize("Float",floatData,3);
+        floatBuffer = micro.toBinary(floatData,"Float",3);
         test.equals(floatBuffer.length, 3, "Float Buffer has incorrect length");
 
-        newFloatData = micro.deserialize(floatBuffer, "Float");
+        newFloatData = micro.toJSON(floatBuffer, "Float");
         test.equals(Object.keys(newFloatData).length,3, "New Float Data has incorrect number of properties");
 
     });
