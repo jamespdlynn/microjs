@@ -1,4 +1,5 @@
-var micro = require("../");
+var micro = require("../lib/micro");
+
 
 var integerSchema = {
     byte : 'byte',

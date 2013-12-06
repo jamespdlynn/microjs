@@ -1,4 +1,4 @@
-var micro = require("../");
+var micro = require("../lib/micro");
 
 var arraySchema = {
     byteArray : ['byte'],
