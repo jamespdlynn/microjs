@@ -13,7 +13,7 @@ define(function(){
            id : "uint8",
            posX : "uint16",
            posY : "uint16",
-           angle : "float8",
+           angle : {type:"float", byteLength:1, precision:1},
            velocity : {type:"float", unsigned:true, byteLength:2, precision:3},
            isAccelerating : "boolean"
        },
@@ -24,7 +24,7 @@ define(function(){
        },
 
        PlayerUpdate : {
-           angle : "float8",
+           angle :  {type:"float", byteLength:1, precision:1},
            isAccelerating : "boolean"
        }
 

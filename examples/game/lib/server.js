@@ -1,5 +1,7 @@
-define(['websocket', 'microjs', 'game/schemas'], function(websocket, micro, schemas){
+define(['websocket', 'microjs', 'game/schemas','game/zone'], function(websocket, micro, schemas, Zone){
+
    var WebSocketServer = websocket.server;
+   var zone = Zone.getInstance();
 
    micro.register(schemas);
 
@@ -18,9 +20,8 @@ define(['websocket', 'microjs', 'game/schemas'], function(websocket, micro, sche
                var origin = request.origin;
                var connection =  request.accept('echo-protocol', origin);
                var playerId = id++;
-               var latency;
-               var initialized = false;
 
+               var player, latency, initialized = false;
 
                connection.on('message', function(msg) {
 
@@ -34,7 +35,7 @@ define(['websocket', 'microjs', 'game/schemas'], function(websocket, micro, sche
 
                                if (data.timestamps.length < 4){
                                    data.timestamps.push(new Date().getTime());
-                                   send(data, 'Ping', connection);
+                                   send(connection, 'Ping', data);
                                    break;
                                }
 
@@ -47,11 +48,14 @@ define(['websocket', 'microjs', 'game/schemas'], function(websocket, micro, sche
                                latency = sumLatency / length;
 
                                if (!initialized){
+                                   player = zone.createPlayer(playerId);
+                                   send(connection, 'Zone', zone.toJSON());
+
                                    connections.push(connection);
                                    initialized = true;
                                }
 
-                               send({playerId : playerId, latency : latency}, 'PlayerInfo', connection);
+                               send(connection,  'PlayerInfo', {playerId : playerId, latency : latency});
 
                                break;
                        }
@@ -66,17 +70,21 @@ define(['websocket', 'microjs', 'game/schemas'], function(websocket, micro, sche
                connection.on('close', function(reasonCode, description) {
                    console.log((new Date()) + ' Connection from origin ' + origin + ' closing.' + reasonCode + " : " + description);
                    connections.splice(connections.indexOf(connection), 1);
+                   zone.players.remove(player);
                });
 
 
-               send({timestamps : [new Date().getTime()]}, "Ping", connection);
+               send(connection, "Ping", {timestamps : [new Date().getTime()]} );
            });
        }
    };
 
-   function send(data, schemaName, connection){
+
+   function send(connection,schemaName,data){
        var buffer = micro.toBinary(data, schemaName);
        connection.sendBytes(buffer);
+
+       micro.toJSON(buffer);
    }
 
 });

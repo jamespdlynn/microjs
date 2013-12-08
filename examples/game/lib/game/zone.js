@@ -1,98 +1,74 @@
-define(['microjs', 'player'], function(micro){
+define(['backbone','game/player'], function(Backbone,Player){
 
-    micro.register("Player", {
-        id : "uint8",
-        posX : "float16",
-        posY : "float16",
-        angle : "float8",
-        velocity : {type:"float", unsigned:true, byteLength:2, precision:3},
-        isAccelerating : "boolean"
+    var PlayerCollection = Backbone.Collection.extend({
+        model : Player
     });
 
-    micro.register("PlayerUpdate", {
-        angle : "float8",
-        isAccelerating : "boolean"
-    });
+    var Zone = function(){
+        this.myPlayer = null;
+        this.players = new PlayerCollection();
+    };
 
-    var Player = function(id){
-        this.id = id;
-        this.data = {
-            posX : 5,
-            posY : 5,
-            angle : 1,
-            velocity : 0,
-            isAccelerating : false
+
+    Zone.WIDTH = 800;
+    Zone.HEIGHT = 600;
+
+    Zone.prototype.createPlayer = function(id){
+        var player = new Player({
+            id : id,
+            posX : Math.random() * Zone.WIDTH,
+            posY : Math.random() * Zone.HEIGHT
+        });
+
+        this.players.add(player);
+
+        return player;
+    }
+
+
+    Zone.prototype.setPlayers = function(playersArray){
+        for (var i=0; i < playersArray.length; i++){
+            this.players.add(playersArray[i]);
+        }
+    }
+
+    Zone.prototype.update = function(){
+
+        for (var i=0; i < this.players.length; i++){
+
+            var player = this.players.at(i);
+            player.update();
+
+            var data = player.attributes;
+
+            var radius = data.size/2;
+            if (data.posX > Zone.WIDTH+radius){
+                data.posX = -radius;
+            }else if (data.posX < -radius){
+                data.posX = Zone.WIDTH+radius;
+            }
+
+            if (data.posY > Zone.HEIGHT+radius){
+                data.posY = -radius;
+            }else if (data.posY < -radius){
+                data.posY = Zone.HEIGHT + radius;
+            }
+        }
+    }
+
+    Zone.prototype.toJSON = function(){
+        return {
+            myPlayer : this.myPlayer,
+            players : this.players.toJSON()
         }
     };
 
-    Player.prototype.update = function(){
-
-        var delta = (Game.velocity + (this.acceleration * this.time)) * Game.interval;
-
-        if (delta > 0){
-            this.x += Math.cos(this.angle) * delta;
-            this.y += Math.sin(this.angle) * delta;
-
-            if (this.x > Game.board.width){
-                this.x = 0;
-            }else if (this.x < 0){
-                this.x = Game.board.width;
-            }
-
-            if (this.y > Game.board.height){
-                this.y = 0;
-            }else if (this.y < 0){
-                this.y = Game.board.height;
-            }
-
-            this.detectCollisons();
-
-            this.time += Game.interval;
-        }
-
-    };
 
 
-    Player.prototype.detectCollisons = function(){
+    var instance = null;
+    Zone.getInstance = function(){
+        return instance || (instance = new Zone());
+    }
 
-        var r = Game.radius;
-
-        for (var i=0; i < Game.players.length; i++){
-            var player = Game.players[i];
-
-            if (player.id == this.id ) continue;
-
-            if (this.x+r > player.x-r && this.x-r < player.x+r && this.y+r > player.y-r && this.y-r < player.y+r){
-
-                console.log("collision");
-
-                var xd = player.x-this.x;
-                var yd = player.y-this.y;
-                var acceleration = player.acceleration;
-                var time = player.time;
-
-                player.angle = Math.atan2(yd, xd);
-                player.acceleration = this.acceleration;
-                player.time = this.time;
-
-                this.angle = (this.angle <= 0) ? this.angle+Math.PI : this.angle-Math.PI;
-                this.acceleration = acceleration;
-                this.time = time;
-
-                break;
-            }
-        }
-    };
-
-    Player.prototype.setAngle = function(x, y){
-        var xd = x-this.x;
-        var yd = y-this.y;
-        var dist = Math.sqrt(Math.pow(Math.abs(xd),2) + Math.pow(Math.abs(yd),2)) * 2;
-
-        this.angle  = Math.atan2(yd, xd);
-        this.acceleration = -1 * (Math.pow(Game.velocity, 2)) / (2*dist);
-        this.time = 0;
-    };
-
-    return Player;
+    return Zone;
 });

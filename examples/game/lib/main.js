@@ -1,3 +1,4 @@
-require(['client'], function(client){
+require(['client','canvas'], function(client, canvas){
    client.run();
+   canvas.run();
 });

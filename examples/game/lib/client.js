@@ -1,6 +1,10 @@
-define(['microjs','game/schemas'], function (micro, schemas){
+define(['browser-buffer','microjs','game/schemas','game/zone'], function (Buffer, micro, schemas, Zone){
 
-    WebSocket = WebSocket || MozWebSocket;
+    var WebSocket = window.WebSocket || window.MozWebSocket;
+    var zone = Zone.getInstance();
+    var url = "ws://" + window.location.host;
+
+    var socket;
 
     micro.register(schemas);
 
@@ -8,26 +12,12 @@ define(['microjs','game/schemas'], function (micro, schemas){
 
         run : function(){
 
-            var url = "ws://" + window.location.host;
-            var socket = new WebSocket(url, 'echo-protocol');
+            socket = new WebSocket(url, 'echo-protocol');
 
             socket.onmessage = function(evt) {
-                console.log("RESPONSE!");
-
-                console.log(evt.data);
-
                 var fileReader = new FileReader();
-                fileReader.onload = function() {
-                    var data = micro.toJSON(new Buffer(this.result));
-                    switch (data._packet.type){
-                        case "Ping":
-                            socket.send(this.result);
-                            break;
-
-                        case "PlayerInfo" :
-                            console.log("PlayerInfo Received! : "+data.playerId);
-                            break;
-                    }
+                fileReader.onload = function(){
+                    readData(this.result);
                 };
                 fileReader.readAsArrayBuffer(evt.data);
             };
@@ -37,5 +27,29 @@ define(['microjs','game/schemas'], function (micro, schemas){
             };
         }
     };
+
+    function readData(raw){
+
+        var dataObj = micro.toJSON(new Buffer(raw));
+
+        switch (dataObj._packet.type){
+            case "Ping":
+                socket.send(raw); //On a Ping just resend the exact same data
+                break;
+
+            case "Player":
+                console.log(JSON.stringify(dataObj));
+                break;
+
+            case "Zone":
+                console.log(JSON.stringify(dataObj));
+                zone.setPlayers(dataObj.players);
+                break;
+
+            case "PlayerInfo" :
+                zone.myPlayer = zone.players.get(dataObj.playerId);
+                break;
+        }
+    }
 
 });

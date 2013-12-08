@@ -1,84 +1,53 @@
-define(['microjs'], function(micro){
+define(['backbone'],function(Backbone){
 
-    var Player = function(id){
-        this.id = id;
-        this.data = {
-            posX : 5,
-            posY : 5,
-            angle : 1,
+    var ACCELERATION = 100;
+    var MAX_VELOCITY =  500;
+
+    var SIZE = 20;
+
+    var Player = Backbone.Model.extend({
+
+        defaults : {
+            posX : 0,
+            posY : 0,
+            angle :0,
             velocity : 0,
-            isAccelerating : false
-        }
-    };
+            isAccelerating : false,
+            acceleration : ACCELERATION,
+            size : SIZE
+        },
 
-    Player.prototype.update = function(){
+        initialize : function(){
+            this.lastUpdated = new Date().getTime();
+        },
 
-        var delta = (Game.velocity + (this.acceleration * this.time)) * Game.interval;
+        update : function(){
+            var currentTime = new Date().getTime();
+            var data = this.attributes;
 
-        if (delta > 0){
-            this.x += Math.cos(this.angle) * delta;
-            this.y += Math.sin(this.angle) * delta;
-
-            if (this.x > Game.board.width){
-                this.x = 0;
-            }else if (this.x < 0){
-                this.x = Game.board.width;
+            if (!data.isAccelerating && data.velocity == 0){
+                this.lastUpdated = currentTime;
+                return;
             }
 
-            if (this.y > Game.board.height){
-                this.y = 0;
-            }else if (this.y < 0){
-                this.y = Game.board.height;
+            var deltaSeconds = (currentTime - this.lastUpdated)/1000;
+            var deltaVelocity = data.acceleration*deltaSeconds;
+
+            if (data.isAccelerating){
+                data.velocity = Math.min(data.velocity+deltaVelocity, MAX_VELOCITY);
+            }else{
+                data.velocity = Math.max(data.velocity-deltaVelocity, 0);
             }
 
-            this.detectCollisons();
+            var deltaPos = data.velocity*deltaSeconds;
+            data.posX += Math.cos(data.angle) * deltaPos;
+            data.posY += Math.sin(data.angle) * deltaPos;
 
-            this.time += Game.interval;
+            this.lastUpdated = currentTime;
         }
 
-    };
+    });
 
-
-    Player.prototype.detectCollisons = function(){
-
-        var r = Game.radius;
-
-        for (var i=0; i < Game.players.length; i++){
-            var player = Game.players[i];
-
-            if (player.id == this.id ) continue;
-
-            if (this.x+r > player.x-r && this.x-r < player.x+r && this.y+r > player.y-r && this.y-r < player.y+r){
-
-                console.log("collision");
-
-                var xd = player.x-this.x;
-                var yd = player.y-this.y;
-                var acceleration = player.acceleration;
-                var time = player.time;
-
-                player.angle = Math.atan2(yd, xd);
-                player.acceleration = this.acceleration;
-                player.time = this.time;
-
-                this.angle = (this.angle <= 0) ? this.angle+Math.PI : this.angle-Math.PI;
-                this.acceleration = acceleration;
-                this.time = time;
-
-                break;
-            }
-        }
-    };
-
-    Player.prototype.setAngle = function(x, y){
-        var xd = x-this.x;
-        var yd = y-this.y;
-        var dist = Math.sqrt(Math.pow(Math.abs(xd),2) + Math.pow(Math.abs(yd),2)) * 2;
-
-        this.angle  = Math.atan2(yd, xd);
-        this.acceleration = -1 * (Math.pow(Game.velocity, 2)) / (2*dist);
-        this.time = 0;
-    };
 
     return Player;
 });
