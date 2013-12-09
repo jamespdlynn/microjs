@@ -1,13 +1,12 @@
-define(['websocket', 'microjs', 'game/schemas','game/zone'], function(websocket, micro, schemas, Zone){
+define(['websocket', 'microjs', 'game/schemas','game/zone'], function(websocket, micro, schemas, zone){
 
    var WebSocketServer = websocket.server;
-   var zone = Zone.getInstance();
 
    micro.register(schemas);
 
    return {
        run : function(httpServer){
-           var id = 0,
+           var id = 1,
                connections = [];
 
            var wsServer = new WebSocketServer({
@@ -29,59 +28,76 @@ define(['websocket', 'microjs', 'game/schemas','game/zone'], function(websocket,
 
                    try{
                        var data = micro.toJSON(msg.binaryData);
-
-                       switch (data._packet.type){
-                           case 'Ping' :
-
-                               if (data.timestamps.length < 4){
-                                   data.timestamps.push(new Date().getTime());
-                                   send(connection, 'Ping', data);
-                                   break;
-                               }
-
-                               var length = data.timestamps.length;
-                               var sumLatency = 0;
-                               for (var i = 1; i < length; i++){
-                                   sumLatency += (data.timestamps[i] - data.timestamps[i-1])/2;
-                               }
-
-                               latency = sumLatency / length;
-
-                               if (!initialized){
-                                   player = zone.createPlayer(playerId);
-                                   send(connection, 'Zone', zone.toJSON());
-
-                                   connections.push(connection);
-                                   initialized = true;
-                               }
-
-                               send(connection,  'PlayerInfo', {playerId : playerId, latency : latency});
-
-                               break;
-                       }
+                       parseData(data);
                    }
                    catch (e){
                        console.log(e);
                    }
 
-
                });
 
                connection.on('close', function(reasonCode, description) {
                    console.log((new Date()) + ' Connection from origin ' + origin + ' closing.' + reasonCode + " : " + description);
-                   connections.splice(connections.indexOf(connection), 1);
-                   zone.players.remove(player);
+                   destroy();
                });
 
+               function initialize(){
+                   player = zone.createPlayer(playerId);
+                   connections.push(connection);
+                   initialized = true;
+               }
 
-               send(connection, "Ping", {timestamps : [new Date().getTime()]} );
+               function destroy(){
+                   connections.splice(connections.indexOf(connection), 1);
+                   zone.players.remove(player);
+               }
+
+               function parseData(data){
+
+                   switch (data._packet.type)
+                   {
+                       case 'Ping' :
+
+                           if (data.timestamps.length <= 3){
+                               ping(data);
+                               break;
+                           }
+
+                           var length = data.timestamps.length;
+                           var sumLatency = 0;
+                           for (var i = 1; i < length; i++){
+                               sumLatency += (data.timestamps[i] - data.timestamps[i-1])/2;
+                           }
+                           latency = sumLatency / length;
+
+
+                           if (!initialized){
+                               initialize();
+                               send(connection, 'GameData', {latency : latency, playerId: playerId, zone: zone.toJSON()});
+                           }
+                           else{
+                               send(connection,  'GameData', {latency : latency}, 2); //send only latency
+                           }
+                           break;
+                   }
+               }
+
+               function ping(data){
+                   data = data || {timestamps:[]};
+                   data.timestamps.push(new Date().getTime());
+
+                   send(connection, "Ping", data);
+               }
+
+               ping();
+
            });
        }
    };
 
 
-   function send(connection,schemaName,data){
-       var buffer = micro.toBinary(data, schemaName);
+   function send(connection,schemaName,data,byteLength){
+       var buffer = micro.toBinary(data, schemaName,byteLength);
        connection.sendBytes(buffer);
 
        micro.toJSON(buffer);

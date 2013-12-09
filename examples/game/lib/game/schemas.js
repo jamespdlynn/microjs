@@ -5,6 +5,12 @@ define(function(){
           timestamps : ["long"]
        },
 
+       GameData : {
+           latency : "uint16",
+           zone : {type:"object", schema:"Zone"},
+           playerId : "uint8"
+       },
+
        Zone : {
            players : [{type:"object", schema:"Player"}]
        },
@@ -16,11 +22,6 @@ define(function(){
            angle : {type:"float", byteLength:1, precision:1},
            velocity : {type:"float", unsigned:true, byteLength:2, precision:3},
            isAccelerating : "boolean"
-       },
-
-       PlayerInfo : {
-           playerId : "uint8",
-           latency : "uint16"
        },
 
        PlayerUpdate : {

@@ -1,10 +1,9 @@
-define(['browser-buffer','microjs','game/schemas','game/zone'], function (Buffer, micro, schemas, Zone){
+define(['browser-buffer','microjs','game/schemas','game/zone'], function (Buffer, micro, schemas, zone){
 
     var WebSocket = window.WebSocket || window.MozWebSocket;
-    var zone = Zone.getInstance();
     var url = "ws://" + window.location.host;
 
-    var socket;
+    var socket, latency;
 
     micro.register(schemas);
 
@@ -31,6 +30,8 @@ define(['browser-buffer','microjs','game/schemas','game/zone'], function (Buffer
     function readData(raw){
 
         var dataObj = micro.toJSON(new Buffer(raw));
+        var players = zone.players;
+
 
         switch (dataObj._packet.type){
             case "Ping":
@@ -38,16 +39,24 @@ define(['browser-buffer','microjs','game/schemas','game/zone'], function (Buffer
                 break;
 
             case "Player":
-                console.log(JSON.stringify(dataObj));
+                players.set(dataObj);
                 break;
 
             case "Zone":
-                console.log(JSON.stringify(dataObj));
-                zone.setPlayers(dataObj.players);
+                players.set(dataObj.players);
                 break;
 
-            case "PlayerInfo" :
-                zone.myPlayer = zone.players.get(dataObj.playerId);
+            case "GameData" :
+                latency = dataObj.latency;
+
+                if (dataObj.zone){
+                    players.set(dataObj.zone.players);
+                }
+
+                if (dataObj.playerId){
+                    zone.myPlayer = players.get(dataObj.playerId);
+                }
+
                 break;
         }
     }

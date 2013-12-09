@@ -1,74 +1,72 @@
 define(['backbone','game/player'], function(Backbone,Player){
 
+    var WIDTH = 800;
+    var HEIGHT = 600;
+
     var PlayerCollection = Backbone.Collection.extend({
         model : Player
     });
 
-    var Zone = function(){
-        this.myPlayer = null;
-        this.players = new PlayerCollection();
-    };
+    var Zone = Backbone.Model.extend({
 
+        initialize : function(){
+            this.players = new PlayerCollection();
+            this.width = WIDTH;
+            this.height = HEIGHT;
+            this.myPlayer = null;
 
-    Zone.WIDTH = 800;
-    Zone.HEIGHT = 600;
+            this.listenTo(this.players, "change:posX", onPosXChange);
+            this.listenTo(this.players, "change:posY", onPosYChange);
+        },
 
-    Zone.prototype.createPlayer = function(id){
-        var player = new Player({
-            id : id,
-            posX : Math.random() * Zone.WIDTH,
-            posY : Math.random() * Zone.HEIGHT
-        });
+        createPlayer : function(id){
+            var player = new Player({
+                id : id,
+                posX : Math.random() * this.width,
+                posY : Math.random() * this.height
+            });
 
-        this.players.add(player);
+            this.players.add(player);
 
-        return player;
-    }
+            return player;
+        },
 
-
-    Zone.prototype.setPlayers = function(playersArray){
-        for (var i=0; i < playersArray.length; i++){
-            this.players.add(playersArray[i]);
-        }
-    }
-
-    Zone.prototype.update = function(){
-
-        for (var i=0; i < this.players.length; i++){
-
-            var player = this.players.at(i);
-            player.update();
-
-            var data = player.attributes;
-
-            var radius = data.size/2;
-            if (data.posX > Zone.WIDTH+radius){
-                data.posX = -radius;
-            }else if (data.posX < -radius){
-                data.posX = Zone.WIDTH+radius;
+        update : function(){
+            var models = this.players.models;
+            for (var i=0; i < models.length; i++){
+                models[i].update();
             }
+        },
 
-            if (data.posY > Zone.HEIGHT+radius){
-                data.posY = -radius;
-            }else if (data.posY < -radius){
-                data.posY = Zone.HEIGHT + radius;
+        toJSON : function(){
+            return {
+                players : this.players.toJSON(),
+                myPlayer : this.myPlayer ? this.myPlayer.toJSON() : null,
+                width : this.width,
+                height : this.height
             }
         }
-    }
+    });
 
-    Zone.prototype.toJSON = function(){
-        return {
-            myPlayer : this.myPlayer,
-            players : this.players.toJSON()
+    function onPosXChange(model, value){
+        var radius = model.attributes.size/2;
+
+        if (value > WIDTH+radius){
+            model.set("posX", -radius);
+        }else if (value < -radius){
+            model.set("posX",WIDTH+radius);
         }
-    };
-
-
-
-    var instance = null;
-    Zone.getInstance = function(){
-        return instance || (instance = new Zone());
     }
 
-    return Zone;
+    function onPosYChange(model,value){
+        var radius = model.attributes.size/2;
+
+        if (value > HEIGHT+radius){
+            model.set("posY", -radius);
+        }else if (value < -radius){
+            model.set("posY",HEIGHT+radius);
+        }
+    }
+
+    return new Zone();
 });
