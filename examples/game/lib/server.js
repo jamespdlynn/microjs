@@ -1,8 +1,10 @@
-define(['websocket', 'microjs', 'game/schemas','game/zone'], function(websocket, micro, schemas, zone){
+define(['websocket', 'microjs', 'model/schemas','model/game','model/zone'], function(websocket, micro, schemas, GameData, Zone){
 
    var WebSocketServer = websocket.server;
 
    micro.register(schemas);
+
+   var MAX_CONNECTIONS = 10;
 
    return {
        run : function(httpServer){
@@ -14,13 +16,21 @@ define(['websocket', 'microjs', 'game/schemas','game/zone'], function(websocket,
                autoAcceptConnections: false
            });
 
+           var zone = new Zone();
+
            wsServer.on('request', function(request){
+
+               if (connections.length >= MAX_CONNECTIONS){
+                   return;
+               }
 
                var origin = request.origin;
                var connection =  request.accept('echo-protocol', origin);
-               var playerId = id++;
+               var gameData = new GameData({
+                   currentZone : zone
+               });
 
-               var player, latency, initialized = false;
+               id = (id%255) + 1; //Increment current id (while making sure it never exceeds a byte)
 
                connection.on('message', function(msg) {
 
@@ -42,14 +52,20 @@ define(['websocket', 'microjs', 'game/schemas','game/zone'], function(websocket,
                });
 
                function initialize(){
-                   player = zone.createPlayer(playerId);
                    connections.push(connection);
-                   initialized = true;
+                   gameData.set({
+                       player : zone.createPlayer(),
+                       initialized : true
+                   })
                }
 
                function destroy(){
                    connections.splice(connections.indexOf(connection), 1);
-                   zone.players.remove(player);
+                   zone.players.remove(gameData.get("player"));
+                   gameData.destroy();
+
+                   connection = undefined;
+                   gameData = undefined;
                }
 
                function parseData(data){
@@ -68,16 +84,19 @@ define(['websocket', 'microjs', 'game/schemas','game/zone'], function(websocket,
                            for (var i = 1; i < length; i++){
                                sumLatency += (data.timestamps[i] - data.timestamps[i-1])/2;
                            }
-                           latency = sumLatency / length;
 
+                           gameData.set("latency",sumLatency / length);
+
+                           var initialized = gameData.get("initialized");
 
                            if (!initialized){
                                initialize();
-                               send(connection, 'GameData', {latency : latency, playerId: playerId, zone: zone.toJSON()});
+                               send(connection, 'GameData', gameData.toJSON());
                            }
                            else{
-                               send(connection,  'GameData', {latency : latency}, 2); //send only latency
+                               send(connection,  'GameData', gameData.toJSON(), 2); //send only latency
                            }
+
                            break;
                    }
                }

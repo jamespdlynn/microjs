@@ -1,14 +1,13 @@
 define(['backbone'],function(Backbone){
 
-    var ACCELERATION = 150;
-    var DECELERATION = 75;
-    var MAX_VELOCITY =  500;
-
-    var SIZE = 20;
-
-
 
     var Player = Backbone.Model.extend({
+
+        //Constants
+        ACCELERATION : 150,
+        DECELERATION : 75,
+        MAX_VELOCITY : 350,
+        SIZE : 20,
 
         defaults : {
             posX : 0,
@@ -17,10 +16,7 @@ define(['backbone'],function(Backbone){
             angle2 : 0,
             velocity : 0,
             velocity2 : 0,
-            isAccelerating : false,
-            acceleration : ACCELERATION,
-            deceleration : DECELERATION,
-            size : SIZE
+            isAccelerating : false
         },
 
         initialize : function(){
@@ -35,10 +31,10 @@ define(['backbone'],function(Backbone){
             //Calculate deltas based on how much time has passed since last update
             var deltaSeconds = (currentTime - this._lastUpdated)/1000;
 
-            var velocity =  data.isAccelerating ? Math.min(data.velocity + (data.acceleration*deltaSeconds),MAX_VELOCITY) :
-                                                  Math.max(data.velocity - (data.deceleration*deltaSeconds), 0) ;
+            var velocity =  data.isAccelerating ? Math.min(data.velocity + (this.ACCELERATION*deltaSeconds),this.MAX_VELOCITY) :
+                                                  Math.max(data.velocity - (this.ACCELERATION*deltaSeconds), 0) ;
 
-            var velocity2 =  Math.max(data.velocity2-(data.deceleration*deltaSeconds), 0);
+            var velocity2 =  Math.max(data.velocity2-(this.DECELERATION*deltaSeconds), 0);
 
             var posX = data.posX;
             var posY = data.posY;
@@ -71,7 +67,7 @@ define(['backbone'],function(Backbone){
             var data = this.attributes;
 
             //Ignore minor angle changes
-            if (Math.abs(angle - data.angle) >= 0.3){
+            if (Math.abs(angle - data.angle) >= 0.2){
 
                 this.update();
 

@@ -7,7 +7,7 @@ define(function(){
 
        GameData : {
            latency : "uint16",
-           zone : {type:"object", schema:"Zone"},
+           currentZone : {type:"object", schema:"Zone"},
            playerId : "uint8"
        },
 

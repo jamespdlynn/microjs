@@ -1,0 +1,28 @@
+<html>
+<head>
+    <title>Micro JS Tests</title>
+    <link rel="stylesheet" href="../node_modules/nodeunit/share/nodeunit.css" type="text/css" />
+    <script src="nodeunit.js"></script>
+    <script src="../lib/micro.js"></script>
+    <script src="../lib/browser-buffer.js"></script>
+    <script src="suites/numbers.js"></script>
+    <script src="suites/booleans.js"></script>
+    <script src="suites/strings.js"></script>
+    <script src="suites/arrays.js"></script>
+    <script src="suites/objects.js"></script>
+    <script src="suites/mixed.js"></script>
+</head>
+<body>
+<h1 id="nodeunit-header">Micro JS Tests</h1>
+<script>
+    nodeunit.run({
+        'Numbers': numbers,
+        'Booleans' : booleans,
+        'Strings' : strings,
+        'Arrays': arrays,
+        'Objects': objects,
+        'Mixed' : mixed
+    });
+</script>
+</body>
+</html>

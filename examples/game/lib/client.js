@@ -1,4 +1,4 @@
-define(['browser-buffer','microjs','game/schemas','game/zone'], function (Buffer, micro, schemas, zone){
+define(['browser-buffer','microjs','model/schemas','model/zone'], function (Buffer, micro, schemas, Zone){
 
     var WebSocket = window.WebSocket || window.MozWebSocket;
     var url = "ws://" + window.location.host;
@@ -30,8 +30,8 @@ define(['browser-buffer','microjs','game/schemas','game/zone'], function (Buffer
     function readData(raw){
 
         var dataObj = micro.toJSON(new Buffer(raw));
-        var players = zone.players;
 
+        var currentZone = gameData.get("currentZone");
 
         switch (dataObj._packet.type){
             case "Ping":
@@ -39,25 +39,31 @@ define(['browser-buffer','microjs','game/schemas','game/zone'], function (Buffer
                 break;
 
             case "Player":
-                players.set(dataObj);
+                if (currentZone){
+                    currentZone.players.set(dataObj);
+                }
                 break;
 
             case "Zone":
-                players.set(dataObj.players);
+                if (currentZone){
+                    currentZone.players.set(dataObj.players);
+                }
                 break;
 
             case "GameData" :
                 latency = dataObj.latency;
 
-                if (dataObj.zone){
-                    players.set(dataObj.zone.players);
-                }
+                if (dataObj.currentZone){
+                    var zone = new Zone(dataObj.currentZone);
+                    var player = zone.players.get(dataObj.playerId);
 
-                if (dataObj.playerId){
-                    zone.myPlayer = players.get(dataObj.playerId);
+                    gameData.set({
+                        currentZone : zone,
+                        player : player,
+                        initialized : true
+                    });
                 }
-
-                break;
+            break;
         }
     }
 
