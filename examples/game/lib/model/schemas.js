@@ -12,6 +12,7 @@ define(function(){
        },
 
        Zone : {
+           id : "uint8",
            players : [{type:"object", schema:"Player"}]
        },
 

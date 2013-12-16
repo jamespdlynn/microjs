@@ -1,8 +1,7 @@
 var http = require("http"),
     express = require("express"),
     path = require('path'),
-    requirejs = require('requirejs'),
-    compressor = require('node-minify');
+    requirejs = require('requirejs');
 
 requirejs.config({
     baseUrl : __dirname+"/lib",
@@ -16,6 +15,7 @@ requirejs.config({
 //Use requires optimizer to build a single 'main' file containing all our modules, to be loaded client side
 requirejs.optimize({
         baseUrl : __dirname+"/lib",
+        name : 'client',
         paths : {
             'microjs' : path.join(__dirname, '../../lib/micro'),
             'browser-buffer' : path.join(__dirname, '../../lib/browser-buffer'),
@@ -32,7 +32,6 @@ requirejs.optimize({
             }
         },
         findNestedDependencies : true,
-        name : 'main',
         out : path.join(__dirname, "/public/main.js"),
         optimize : 'none'
     },
@@ -45,21 +44,10 @@ requirejs.optimize({
     }
 );
 
-//Compress the require js client file, and send it to the public directory
-new compressor.minify({
-    type: 'gcc',
-    fileIn:  path.join(require.resolve('requirejs'), '../../require.js'),
-    fileOut: path.join(__dirname,"/public/require.js"),
-    callback: function(err){
-       console.log(err);
-    }
-});
-
 var app = express();
 app.use(express.logger('dev'));
 app.use(express.errorHandler());
 app.use(express.static(__dirname+"/public"));
-
 
 var httpServer = http.createServer(app),
     port = process.env.PORT || 3000;

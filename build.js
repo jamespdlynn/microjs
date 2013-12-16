@@ -1,14 +1,17 @@
-var reporter = require('nodeunit').reporters.default;
-var compressor = require('node-minify');
+require('./test/runner.js'); //run tests
 
-reporter.run(['test']);
+var compressor = require('node-minify');
 
 new compressor.minify({
     type: 'gcc',
     fileIn: 'lib/micro.js',
     fileOut: 'bin/micro.js',
     callback: function(err){
-        console.log(err);
+        if (err){
+            console.log(err);
+        }else{
+            console.log("Built micro.js");
+        }
     }
 });
 
@@ -17,7 +20,11 @@ new compressor.minify({
     fileIn: 'lib/browser-buffer.js',
     fileOut: 'bin/browser-buffer.js',
     callback: function(err){
-        console.log(err);
+        if (err){
+            console.log(err);
+        }else{
+            console.log("Built browser-buffer.js");
+        }
     }
 });
 

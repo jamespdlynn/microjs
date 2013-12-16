@@ -25,7 +25,7 @@
     exports.testRegisterSchema = function(test){
 
         test.doesNotThrow(function(){
-            micro.register(arraySchema,"Array",{serializeType:false});
+            micro.register(arraySchema,"Array",false);
             test.ok(micro.getSchema("Array"), "Array schema found");
         });
 

@@ -1,70 +1,65 @@
-define(['browser-buffer','microjs','model/schemas','model/zone'], function (Buffer, micro, schemas, Zone){
+define('client', ['browser-buffer', 'microjs', 'model/schemas', 'model/zone'],
 
-    var WebSocket = window.WebSocket || window.MozWebSocket;
-    var url = "ws://" + window.location.host;
+    function (Buffer, micro, schemas, Zone){
 
-    var socket, latency;
+        var WebSocket = window.WebSocket || window.MozWebSocket;
 
-    micro.register(schemas);
+        micro.register(schemas);
 
-    return {
+        return {
 
-        run : function(){
+            run : function(){
 
-            socket = new WebSocket(url, 'echo-protocol');
+                var socket = new WebSocket( "ws://"+window.location.host, 'microjs');
 
-            socket.onmessage = function(evt) {
-                var fileReader = new FileReader();
-                fileReader.onload = function(){
-                    readData(this.result);
+                socket.onmessage = function(evt) {
+                    var fileReader = new FileReader();
+                    fileReader.onload = function(){
+                        readData(this.result);
+                    };
+                    fileReader.readAsArrayBuffer(evt.data);
                 };
-                fileReader.readAsArrayBuffer(evt.data);
-            };
 
-            socket.onerror = function(err) {
-                console.log('WebSocket error: '+ err);
-            };
-        }
-    };
+                socket.onerror = function(err) {
+                    console.log('WebSocket error: '+ err);
+                };
 
-    function readData(raw){
+                function readData (raw){
 
-        var dataObj = micro.toJSON(new Buffer(raw));
+                    var dataObj = micro.toJSON(new Buffer(raw));
 
-        var currentZone = gameData.get("currentZone");
+                    switch (dataObj._type){
+                        case "Ping":
+                            socket.send(raw); //On a Ping just resend the exact same data
+                            break;
 
-        switch (dataObj._packet.type){
-            case "Ping":
-                socket.send(raw); //On a Ping just resend the exact same data
-                break;
+                        case "GameData" :
+                            gameData.set(dataObj);
+                            gameData.set("isRunning", gameData.currentZone.players.length);
+                            break;
 
-            case "Player":
-                if (currentZone){
-                    currentZone.players.set(dataObj);
+                        case "Zone":
+                            gameData.set("currentZone", dataObj);
+                            gameData.set("isRunning", gameData.currentZone.players.length);
+                            break;
+
+                        case "Player":
+                            gameData.currentZone.set("players", [dataObj]);
+                            break;
+                    }
                 }
-                break;
+            }
+        };
 
-            case "Zone":
-                if (currentZone){
-                    currentZone.players.set(dataObj.players);
-                }
-                break;
 
-            case "GameData" :
-                latency = dataObj.latency;
-
-                if (dataObj.currentZone){
-                    var zone = new Zone(dataObj.currentZone);
-                    var player = zone.players.get(dataObj.playerId);
-
-                    gameData.set({
-                        currentZone : zone,
-                        player : player,
-                        initialized : true
-                    });
-                }
-            break;
-        }
     }
+);
 
+//Main require function
+require(['model/game','view','client'], function(GameData, GameView, Client){
+    //Create global game data object
+    window.gameData = new GameData();
+
+    GameView.initialize();
+    Client.run();
 });

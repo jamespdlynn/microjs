@@ -1,4 +1,4 @@
-define(['websocket', 'microjs', 'model/schemas','model/game','model/zone'], function(websocket, micro, schemas, GameData, Zone){
+define(["websocket", "microjs", "model/schemas","model/zone"], function(websocket, micro, schemas, Zone){
 
    var WebSocketServer = websocket.server;
 
@@ -8,71 +8,58 @@ define(['websocket', 'microjs', 'model/schemas','model/game','model/zone'], func
 
    return {
        run : function(httpServer){
-           var id = 1,
-               connections = [];
+
+           var id = 1;
+           var connections = [];
+           var zone = new Zone();
 
            var wsServer = new WebSocketServer({
                httpServer: httpServer,
                autoAcceptConnections: false
            });
 
-           var zone = new Zone();
-
-           wsServer.on('request', function(request){
+           wsServer.on("request", function(request){
 
                if (connections.length >= MAX_CONNECTIONS){
                    return;
                }
 
                var origin = request.origin;
-               var connection =  request.accept('echo-protocol', origin);
-               var gameData = new GameData({
-                   currentZone : zone
-               });
+               var connection =  request.accept("microjs", origin);
+
+               var player;
 
                id = (id%255) + 1; //Increment current id (while making sure it never exceeds a byte)
+               ping();
 
-               connection.on('message', function(msg) {
+               connection.on("message", function(msg) {
 
-                   if (msg.type !== 'binary') return;
-
-                   try{
-                       var data = micro.toJSON(msg.binaryData);
-                       parseData(data);
+                   if (msg.type == "binary"){
+                       //try{
+                           readData(msg.binaryData);
+                       //}
+                       //catch (e){
+                       //    console.log(e);
+                       //}
                    }
-                   catch (e){
-                       console.log(e);
-                   }
-
                });
 
-               connection.on('close', function(reasonCode, description) {
-                   console.log((new Date()) + ' Connection from origin ' + origin + ' closing.' + reasonCode + " : " + description);
-                   destroy();
-               });
-
-               function initialize(){
-                   connections.push(connection);
-                   gameData.set({
-                       player : zone.createPlayer(),
-                       initialized : true
-                   })
-               }
-
-               function destroy(){
+               connection.on("close", function() {
                    connections.splice(connections.indexOf(connection), 1);
-                   zone.players.remove(gameData.get("player"));
-                   gameData.destroy();
+                   zone.players.remove(player);
 
+                   player = undefined;
                    connection = undefined;
-                   gameData = undefined;
-               }
+               });
 
-               function parseData(data){
 
-                   switch (data._packet.type)
+               function readData(binaryData){
+
+                   var data = micro.toJSON(binaryData);
+
+                   switch (data._type)
                    {
-                       case 'Ping' :
+                       case "Ping" :
 
                            if (data.timestamps.length <= 3){
                                ping(data);
@@ -85,16 +72,15 @@ define(['websocket', 'microjs', 'model/schemas','model/game','model/zone'], func
                                sumLatency += (data.timestamps[i] - data.timestamps[i-1])/2;
                            }
 
-                           gameData.set("latency",sumLatency / length);
+                           var latency = sumLatency / length;
 
-                           var initialized = gameData.get("initialized");
-
-                           if (!initialized){
-                               initialize();
-                               send(connection, 'GameData', gameData.toJSON());
+                           if (!player){
+                               player = zone.createPlayer(id);
+                               connections.push(connection);
+                               send(connection,  "GameData", {latency:latency, playerId:player.id, currentZone:zone.toJSON()});
                            }
                            else{
-                               send(connection,  'GameData', gameData.toJSON(), 2); //send only latency
+                               send(connection,  "GameData", {latency:latency}, 2); //send only latency
                            }
 
                            break;
@@ -108,7 +94,7 @@ define(['websocket', 'microjs', 'model/schemas','model/game','model/zone'], func
                    send(connection, "Ping", data);
                }
 
-               ping();
+
 
            });
        }
