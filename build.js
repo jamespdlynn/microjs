@@ -1,4 +1,4 @@
-require('./test/runner.js'); //run tests
+require('./test/test.js'); //run tests
 
 var compressor = require('node-minify');
 

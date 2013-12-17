@@ -21,7 +21,9 @@ define(function(){
            posX : "uint16",
            posY : "uint16",
            angle : {type:"float", byteLength:1, precision:1},
-           velocity : {type:"float", unsigned:true, byteLength:2, precision:3},
+           angle2 : {type:"float", byteLength:1, precision:1},
+           velocity : {type:"float", unsigned:true, byteLength:2, precision:2},
+           velocity2 : {type:"float", unsigned:true, byteLength:2, precision:2},
            isAccelerating : "boolean"
        },
 

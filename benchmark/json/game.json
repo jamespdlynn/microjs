@@ -1,0 +1,159 @@
+{
+    "latency" : 345,
+    "playerId" : 12,
+    "currentZone" : {
+        "id" : 0,
+        "players" : [
+            {
+                "id" : 1,
+                "posX" : 543.2,
+                "posY" : 1243.5,
+                "angle" : 1.2,
+                "angle2" : -0.5,
+                "velocity" : 243.4,
+                "velocity2" : 65.4,
+                "isAccelerating" : false
+            },
+            {
+                "id" : 2,
+                "posX" : 543.2,
+                "posY" : 1243.5,
+                "angle" : 1.2,
+                "angle2" : -0.5,
+                "velocity" : 243.4,
+                "velocity2" : 65.4,
+                "isAccelerating" : false
+            },
+            {
+                "id" : 3,
+                "posX" : 543.2,
+                "posY" : 1243.5,
+                "angle" : 1.2,
+                "angle2" : -0.5,
+                "velocity" : 243.4,
+                "velocity2" : 65.4,
+                "isAccelerating" : true
+            },
+            {
+                "id" : 4,
+                "posX" : 543.2,
+                "posY" : 1243.5,
+                "angle" : 1.2,
+                "angle2" : -0.5,
+                "velocity" : 243.4,
+                "velocity2" : 65.4,
+                "isAccelerating" : false
+            },
+            {
+                "id" : 5,
+                "posX" : 543.2,
+                "posY" : 1243.5,
+                "angle" : 1.2,
+                "angle2" : -0.5,
+                "velocity" : 243.4,
+                "velocity2" : 65.4,
+                "isAccelerating" : false
+            },
+            {
+                "id" : 6,
+                "posX" : 543.2,
+                "posY" : 1243.5,
+                "angle" : 1.2,
+                "angle2" : -0.5,
+                "velocity" : 243.4,
+                "velocity2" : 65.4,
+                "isAccelerating" : true
+            },
+            {
+                "id" : 7,
+                "posX" : 543.2,
+                "posY" : 1243.5,
+                "angle" : 1.2,
+                "angle2" : -0.5,
+                "velocity" : 243.4,
+                "velocity2" : 65.4,
+                "isAccelerating" : false
+            },
+            {
+                "id" : 8,
+                "posX" : 543.2,
+                "posY" : 1243.5,
+                "angle" : 1.2,
+                "angle2" : -0.5,
+                "velocity" : 243.4,
+                "velocity2" : 65.4,
+                "isAccelerating" : false
+            },
+            {
+                "id" : 9,
+                "posX" : 543.2,
+                "posY" : 1243.5,
+                "angle" : 1.2,
+                "angle2" : -0.5,
+                "velocity" : 243.4,
+                "velocity2" : 65.4,
+                "isAccelerating" : true
+            },
+            {
+                "id" : 10,
+                "posX" : 543.2,
+                "posY" : 1243.5,
+                "angle" : 1.2,
+                "angle2" : -0.5,
+                "velocity" : 243.4,
+                "velocity2" : 65.4,
+                "isAccelerating" : false
+            },
+            {
+                "id" : 11,
+                "posX" : 543.2,
+                "posY" : 1243.5,
+                "angle" : 1.2,
+                "angle2" : -0.5,
+                "velocity" : 243.4,
+                "velocity2" : 65.4,
+                "isAccelerating" : false
+            },
+            {
+                "id" : 12,
+                "posX" : 543.2,
+                "posY" : 1243.5,
+                "angle" : 1.2,
+                "angle2" : -0.5,
+                "velocity" : 243.4,
+                "velocity2" : 65.4,
+                "isAccelerating" : true
+            },
+            {
+                "id" : 13,
+                "posX" : 543.2,
+                "posY" : 1243.5,
+                "angle" : 1.2,
+                "angle2" : -0.5,
+                "velocity" : 243.4,
+                "velocity2" : 65.4,
+                "isAccelerating" : false
+            },
+            {
+                "id" : 14,
+                "posX" : 543.2,
+                "posY" : 1243.5,
+                "angle" : 1.2,
+                "angle2" : -0.5,
+                "velocity" : 243.4,
+                "velocity2" : 65.4,
+                "isAccelerating" : false
+            },
+            {
+                "id" : 15,
+                "posX" : 543.2,
+                "posY" : 1243.5,
+                "angle" : 1.2,
+                "angle2" : -0.5,
+                "velocity" : 243.4,
+                "velocity2" : 65.4,
+                "isAccelerating" : true
+            }
+        ]
+    }
+}
