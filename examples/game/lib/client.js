@@ -3,15 +3,15 @@ define('client', ['browser-buffer', 'microjs', 'model/schemas', 'model/zone'],
     function (Buffer, micro, schemas, Zone){
 
         var WebSocket = window.WebSocket || window.MozWebSocket;
-
-        micro.register(schemas);
-
         return {
 
             run : function(){
 
-                var socket = new WebSocket( "ws://"+window.location.host, 'microjs');
+                micro.register(schemas);
 
+                var latency = 0;
+
+                var socket = new WebSocket( "ws://"+window.location.host, "microjs");
                 socket.onmessage = function(evt) {
                     var fileReader = new FileReader();
                     fileReader.onload = function(){
@@ -19,38 +19,56 @@ define('client', ['browser-buffer', 'microjs', 'model/schemas', 'model/zone'],
                     };
                     fileReader.readAsArrayBuffer(evt.data);
                 };
-
                 socket.onerror = function(err) {
                     console.log('WebSocket error: '+ err);
                 };
 
-                function readData (raw){
+                gameData.on("player:update", onPlayerUpdate);
+
+                function readData(raw){
 
                     var dataObj = micro.toJSON(new Buffer(raw));
 
                     switch (dataObj._type){
                         case "Ping":
-                            socket.send(raw); //On a Ping just resend the exact same data
+                            if (dataObj.latency){
+                                latency = dataObj.latency;
+                            }else{
+                                socket.send(raw); //If latency hasn't been calculated yet, just return the packet
+                            }
                             break;
 
                         case "GameData" :
                             gameData.set(dataObj);
-                            gameData.set("isRunning", gameData.currentZone.players.length);
+                            gameData.currentZone.update(latency);
                             break;
 
                         case "Zone":
-                            gameData.set("currentZone", dataObj);
-                            gameData.set("isRunning", gameData.currentZone.players.length);
+                            gameData.currentZone.set(dataObj);
+                            gameData.currentZone.update(latency);
                             break;
 
                         case "Player":
-                            gameData.currentZone.set("players", [dataObj]);
+                        case "PlayerUpdate":
+                            gameData.currentZone.players.set([dataObj]);
+                            gameData.currentZone.update(latency);
+                            break;
+
+                        default:
+                            console.warn("Unknown schema type received: "+dataObj._type);
                             break;
                     }
                 }
+
+                function onPlayerUpdate(){
+                    if (gameData.player && gameData.player.hasChanged()){
+                        var buffer = micro.toBinary(gameData.player.toJSON(), "PlayerUpdate");
+                        socket.send(buffer);
+                    }
+                }
+
             }
         };
-
 
     }
 );

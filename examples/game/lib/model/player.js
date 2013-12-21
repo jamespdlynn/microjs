@@ -4,9 +4,9 @@ define(['backbone'],function(Backbone){
     var Player = Backbone.Model.extend({
 
         //Constants
-        ACCELERATION : 150,
-        DECELERATION : 75,
-        MAX_VELOCITY : 350,
+        ACCELERATION : 75,
+        DECELERATION : 25,
+        MAX_VELOCITY : 225,
         SIZE : 20,
 
         defaults : {
@@ -24,12 +24,80 @@ define(['backbone'],function(Backbone){
             this._lastUpdated = new Date().getTime();
         },
 
-        update : function(){
+        /*** @override*/
+        set: function(key, val, options) {
+
+            if (key == null) return this;
+            var attrs;
+            if (typeof key === 'object') {
+                attrs = key; options = val;
+            } else {
+                (attrs = {})[key] = val;
+            }
+
+            if (attrs.hasOwnProperty("posX")){
+                attrs.posX = toPrecision(attrs.posX,6);
+            }
+
+            if (attrs.hasOwnProperty("posY")){
+                attrs.posY = toPrecision(attrs.posY,6);
+            }
+
+            if (attrs.hasOwnProperty("velocity")){
+                attrs.velocity = toPrecision(attrs.velocity,2);
+            }
+
+            if (attrs.hasOwnProperty("velocity2")){
+                attrs.velocity2 = toPrecision(attrs.velocity2,2);
+            }
+
+            if (attrs.hasOwnProperty("angle")){
+
+                attrs.angle = toPrecision(attrs.angle,1);
+
+                if (!attrs.hasOwnProperty("angle2")){
+
+                    var angle = attrs.angle;
+                    var data = this.attributes;
+
+                    //If we don't have a current velocity we can skip most of the logic
+                    if (data.velocity > 0){
+
+                        attrs.velocity = 0;
+
+                        //The new former velocity is going to be an average of the old former and the old current
+                        if (data.velocity2 > 0){
+
+                            var velocityX = (Math.cos(data.angle) * data.velocity) + (Math.cos(data.angle2) * data.velocity2);
+                            var velocityY = (Math.sin(data.angle) * data.velocity) + (Math.sin(data.angle2) * data.velocity2);
+
+                            attrs.angle2 = toPrecision(Math.atan2(velocityY, velocityX), 1);
+                            attrs.velocity2 =  toPrecision(Math.abs(Math.sqrt((velocityX*velocityX)+(velocityY*velocityY))), 2);
+                        }
+                        else{
+                            attrs.angle2 = data.angle;
+                            attrs.velocity2 = data.velocity;
+                        }
+
+
+                    }
+                }
+            }
+
+
+
+            return Backbone.Model.prototype.set.call(this, attrs, options);
+        },
+
+        update : function(timeOffset){
+
+            timeOffset = timeOffset || 0;
+
             var currentTime = new Date().getTime();
             var data = this.attributes;
 
             //Calculate deltas based on how much time has passed since last update
-            var deltaSeconds = (currentTime - this._lastUpdated)/1000;
+            var deltaSeconds = (currentTime - this._lastUpdated + timeOffset)/1000;
 
             var velocity =  data.isAccelerating ? Math.min(data.velocity + (this.ACCELERATION*deltaSeconds),this.MAX_VELOCITY) :
                                                   Math.max(data.velocity - (this.ACCELERATION*deltaSeconds), 0) ;
@@ -51,62 +119,19 @@ define(['backbone'],function(Backbone){
                 posY += Math.sin(data.angle2) * velocity2 * deltaSeconds;
             }
 
-
-
             //Update attributes
             this.set({posX:posX, posY:posY, velocity:velocity, velocity2:velocity2});
 
-
             //Update last updated timestamp
             this._lastUpdated = currentTime;
-        },
-
-
-        setNewAngle : function(angle){
-
-            var data = this.attributes;
-
-            //Ignore minor angle changes
-            if (Math.abs(angle - data.angle) >= 0.2){
-
-                this.update();
-
-                //If we don't have a current velocity we can skip most of the logic
-                if (data.velocity == 0){
-                    this.set({angle:angle, velocity:0});
-                }
-                else{
-                    var angle2, velocity2;
-
-                    //The new former velocity is going to be an average of the old former and the old current
-                    if (data.velocity2 > 0){
-
-                        var velocityX = (Math.cos(data.angle) * data.velocity) + (Math.cos(data.angle2) * data.velocity2);
-                        var velocityY = (Math.sin(data.angle) * data.velocity) + (Math.sin(data.angle2) * data.velocity2);
-
-                        angle2 = Math.atan2(velocityY, velocityX);
-                        velocity2 = Math.abs(Math.sqrt((velocityX*velocityX)+(velocityY*velocityY)));
-                    }
-                    else{
-                        angle2 = data.angle;
-                        velocity2 = data.velocity;
-                    }
-                    this.set({angle:angle, velocity:0, angle2:angle2, velocity2:velocity2});
-                }
-            }
-        },
-
-        startAccelerating : function(){
-            this.update();
-            this.set("isAccelerating",true);
-        },
-
-        stopAccelerating : function(){
-            this.update();
-            this.set("isAccelerating",false);
         }
     });
 
+
+
+    function toPrecision(value, precision){
+        return Number(value.toFixed(precision));
+    }
 
     return Player;
 });

@@ -2,13 +2,14 @@ define(function(){
    return {
 
        Ping : {
-          timestamps : ["long"]
+          timestamps : ["long"],
+          latency : "uint16"
        },
 
        GameData : {
-           latency : "uint16",
            currentZone : {type:"object", schema:"Zone"},
-           playerId : "uint8"
+           playerId : "uint8",
+           isRunning : "boolean"
        },
 
        Zone : {
@@ -18,8 +19,8 @@ define(function(){
 
        Player : {
            id : "uint8",
-           posX : "uint16",
-           posY : "uint16",
+           posX : {type:"float", byteLength:4, precision:6},
+           posY : {type:"float", byteLength:4, precision:6},
            angle : {type:"float", byteLength:1, precision:1},
            angle2 : {type:"float", byteLength:1, precision:1},
            velocity : {type:"float", unsigned:true, byteLength:2, precision:2},

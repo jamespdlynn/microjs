@@ -23,8 +23,7 @@ define(['model/Zone'],function(Zone){
 
             canvas.addEventListener('mousemove', onMouseMove);
             canvas.addEventListener('mousedown', onMouseDown);
-            canvas.addEventListener('mouseup', onMouseUp);
-            canvas.addEventListener('mouseout', onMouseOut);
+
 
             gameData.on("change:isRunning", function(){
                 onFrame();
@@ -40,7 +39,7 @@ define(['model/Zone'],function(Zone){
             canvas.removeEventListener('mousemove', onMouseMove);
             canvas.removeEventListener('mousedown', onMouseDown);
             canvas.removeEventListener('mouseup', onMouseUp);
-            canvas.removeEventListener('mouseout', onMouseOut);
+            canvas.removeEventListener('mouseout', onMouseUp);
 
             var context = canvas.getContext("2d");
             context.clearRect(0, 0, canvas.width, canvas.height);
@@ -89,16 +88,15 @@ define(['model/Zone'],function(Zone){
 
         context.font = "11px sans-serif";
         context.fillStyle = '#FFFFFF';
-        context.fillText("posX: "+String(data.posX).substring(0,5), 10, canvas.height-120);
-        context.fillText("posY: "+String(data.posY).substring(0,5), 10, canvas.height-100);
-        context.fillText("angle: "+String(data.angle).substring(0,4), 10, canvas.height-80);
-        context.fillText("velocity: "+String(data.velocity).substring(0,5), 10, canvas.height-60);
-        context.fillText("angle2: "+String(data.angle2).substring(0,4), 10, canvas.height-40);
-        context.fillText("velocity2: "+String(data.velocity2).substring(0,5), 10, canvas.height-20);
+        context.fillText("posX: "+data.posX, 10, canvas.height-120);
+        context.fillText("posY: "+data.posY, 10, canvas.height-100);
+        context.fillText("angle: "+data.angle, 10, canvas.height-80);
+        context.fillText("velocity: "+data.velocity, 10, canvas.height-60);
+        context.fillText("angle2: "+data.angle2, 10, canvas.height-40);
+        context.fillText("velocity2: "+data.velocity2, 10, canvas.height-20);
     }
 
-    var mouseX, mouseY, timeout;
-
+    var mouseX, mouseY, angleTimeout;
     function onMouseMove(evt){
 
         if (GameView.isRunning())
@@ -107,44 +105,63 @@ define(['model/Zone'],function(Zone){
             mouseX = (evt.clientX - rect.left);
             mouseY = (evt.clientY - rect.top);
 
-            if (!timeout){
-                var time = Math.min(gameData.get("latency"),100);
-                timeout = setTimeout(onTimeout, time);
+            if (!angleTimeout){
+                angleTimeout = setTimeout(function(){
+                    var data = gameData.player.attributes;
+
+                    var deltaX = mouseX - data.posX ;
+                    var deltaY = mouseY - data.posY;
+
+
+                    if (Math.abs(deltaX) > gameData.player.SIZE || Math.abs(deltaY) > gameData.player.SIZE){
+
+                        var newAngle = Math.atan2(deltaY, deltaX);
+
+                        //Ignore minor angle changes
+                        if (Math.abs(newAngle - gameData.player.get("angle")) >= 0.2){
+                            gameData.player.update();
+                            gameData.player.set("angle", newAngle);
+                            gameData.trigger("player:update");
+                        }
+                    }
+
+                    angleTimeout = undefined;
+                }, 50);
             }
         }
     }
 
-    function onTimeout(){
-        var data = gameData.player.attributes;
-
-        var deltaX = mouseX - data.posX ;
-        var deltaY = mouseY - data.posY;
-
-        if (Math.abs(deltaX) > gameData.player.SIZE || Math.abs(deltaY) > gameData.player.SIZE){
-            gameData.player.setNewAngle(Math.atan2(deltaY, deltaX));
-        }
-
-        timeout = undefined;
-    }
-
-
+    var accelerateTimeout;
     function onMouseDown(){
-        if (GameView.isRunning()){
-            gameData.player.startAccelerating();
+        if (GameView.isRunning() && !accelerateTimeout){
+
+            accelerateTimeout = setTimeout(function(){
+                gameData.player.update();
+                gameData.player.set("isAccelerating", true);
+                gameData.trigger("player:update");
+
+                accelerateTimeout = undefined;
+            }, 200);
+
+            canvas.addEventListener('mouseup', onMouseUp);
+            canvas.addEventListener('mouseout', onMouseUp);
         }
     }
 
     function onMouseUp(){
-        if (GameView.isRunning()){
-            gameData.player.stopAccelerating();
+        if (accelerateTimeout){
+            clearTimeout(accelerateTimeout);
+            accelerateTimeout = undefined;
+        }else{
+            gameData.player.update();
+            gameData.player.set("isAccelerating", false);
+            gameData.trigger("player:update");
         }
+
+        canvas.removeEventListener('mouseup', onMouseUp);
+        canvas.removeEventListener('mouseout', onMouseUp);
     }
 
-    function onMouseOut(){
-        if (GameView.isRunning()){
-            gameData.player.stopAccelerating();
-        }
-    }
 
     //Calculates display data (display data may be slightly different than actual data, as it allows for smoothing)
     function getDisplayData(player){

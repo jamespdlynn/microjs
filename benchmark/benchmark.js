@@ -148,7 +148,6 @@ var totalZLib = 0,
 
         totalMicroJS += percentCompressed;
 
-        fs.writeFileSync(__dirname+"/"+fileName, JSON.stringify(micro.toJSON(microBuffer)));
         next(index+1);
     });
 

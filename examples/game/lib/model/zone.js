@@ -7,8 +7,8 @@ define(['backbone','model/player'], function(Backbone,Player){
     var Zone = Backbone.Model.extend({
 
         //Constants
-        WIDTH : 800,
-        HEIGHT : 600,
+        WIDTH : 1024,
+        HEIGHT : 512,
 
         defaults : {
             id : 0,
@@ -17,6 +17,7 @@ define(['backbone','model/player'], function(Backbone,Player){
 
         /** @override*/
         constructor : function(){
+            //We keep track of players within a collection rather that just an array
             this.players = new PlayerCollection();
             Backbone.Model.prototype.constructor.apply(this, arguments);
         },
@@ -41,6 +42,7 @@ define(['backbone','model/player'], function(Backbone,Player){
                 (attrs = {})[key] = val;
             }
 
+            //Rather than replacing the players collection, we use its set property to update what is necessary
             if (attrs.players){
                 this.players.set(attrs.players);
                 delete attrs.players;
@@ -53,38 +55,25 @@ define(['backbone','model/player'], function(Backbone,Player){
         toJSON : function(){
             var json =  Backbone.Model.prototype.toJSON.call(this);
             json.players = this.players.toJSON();
-
-            console.log(json.players);
-
             return json;
         },
 
-        createPlayer : function(id){
-            var player = new Player({
-                id : id,
-                posX : Math.random() * this.WIDTH,
-                posY : Math.random() * this.HEIGHT
-            });
 
-            this.players.add(player);
-
-            return player;
-        },
-
-        update : function(){
+        update : function(timeOffset){
             for (var i=0; i < this.players.length; i++){
-                this.players.at(i).update();
+                this.players.at(i).update(timeOffset);
             }
         }
     });
 
     function onPosXChange(model, value){
+
         var radius = model.SIZE/2;
 
         if (value > this.WIDTH+radius){
-            model.set("posX", -radius);
+            model.set("posX", value-this.WIDTH-radius);
         }else if (value < -radius){
-            model.set("posX",this.WIDTH+radius);
+            model.set("posX",this.WIDTH+radius+value);
         }
     }
 
@@ -92,9 +81,9 @@ define(['backbone','model/player'], function(Backbone,Player){
         var radius = model.SIZE/2;
 
         if (value > this.HEIGHT+radius){
-            model.set("posY", -radius);
+            model.set("posY", value-this.HEIGHT-radius);
         }else if (value < -radius){
-            model.set("posY",this.HEIGHT+radius);
+            model.set("posY",this.HEIGHT+radius+value);
         }
     }
 
