@@ -58,13 +58,15 @@ define(['model/zone'],function(Zone){
 
         for (var i=0; i < currentZone.players.length; i++){
 
-            context.save();
+
 
             var player = currentZone.players.at(i);
             player.update();
 
             var display = getDisplayData(player);
 
+
+            context.save();
             context.translate(display.posX,display.posY);
             context.rotate(display.angle+(Math.PI/2));
             context.beginPath();
@@ -82,8 +84,8 @@ define(['model/zone'],function(Zone){
 
         context.font = "11px sans-serif";
         context.fillStyle = '#FFFFFF';
-        context.fillText("posX: "+data.posX, 10, canvas.height-120);
-        context.fillText("posY: "+data.posY, 10, canvas.height-100);
+        context.fillText("posX: "+display.posX, 10, canvas.height-120);
+        context.fillText("posY: "+display.posY, 10, canvas.height-100);
         context.fillText("angle: "+data.angle, 10, canvas.height-80);
         context.fillText("velocity: "+data.velocity, 10, canvas.height-60);
         context.fillText("Auxiliary Angles: "+JSON.stringify(data.auxiliaryAngles), 10, canvas.height-40);
@@ -100,7 +102,7 @@ define(['model/zone'],function(Zone){
         mouseY = (evt.clientY - rect.top);
 
         if (!updateTimeout){
-            setTimeout(triggerUpdate, 100);
+            updateTimeout = setTimeout(triggerUpdate, 80);
         }
     }
 
@@ -112,7 +114,7 @@ define(['model/zone'],function(Zone){
 
         mouseDown = true;
         if (!updateTimeout){
-            setTimeout(triggerUpdate, 100);
+            updateTimeout = setTimeout(triggerUpdate, 80);
         }
 
         canvas.addEventListener('mouseup', onMouseUp);
@@ -123,7 +125,7 @@ define(['model/zone'],function(Zone){
 
        mouseDown = false;
        if (!updateTimeout){
-           setTimeout(triggerUpdate, 100);
+           updateTimeout = setTimeout(triggerUpdate, 80);
        }
 
        canvas.removeEventListener('mouseup', onMouseUp);
@@ -146,6 +148,8 @@ define(['model/zone'],function(Zone){
         }
 
         gameData.trigger("change:player");
+
+        updateTimeout = undefined;
     }
 
     //Calculates display data (display data may be slightly different than actual data, as it allows for smoothing)
@@ -154,7 +158,7 @@ define(['model/zone'],function(Zone){
         var data = player.attributes;
 
         if (!player.display){
-            return player.display = {angle:data.angle, posX: data.posX, posY:data.posY, radius:player.SIZE/2};
+            return player.display = {angle:data.angle, posX: Math.round(data.posX), posY:Math.round(data.posY), radius:player.SIZE/2};
         }
 
         var display = player.display;
@@ -176,8 +180,8 @@ define(['model/zone'],function(Zone){
             }
         }
 
-        display.posX = data.posX;
-        display.posY = data.posY;
+        display.posX = Math.round(data.posX);
+        display.posY = Math.round(data.posY);
 
         return display;
     }

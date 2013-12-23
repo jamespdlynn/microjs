@@ -65,7 +65,7 @@ define(['backbone'],function(Backbone){
 
                         var auxiliaryData = addAngles(currentAngle, currentVelocity, auxiliaryAngles[0], auxiliaryVelocities[0]);
                         auxiliaryAngles[0] = auxiliaryData.angle.toPrecision(1);
-                        auxiliaryVelocities[0] = auxiliaryData.velocity.toPrecision(2);
+                        auxiliaryVelocities[0] = auxiliaryData.velocity;
                     }
                 }
             }
@@ -104,7 +104,6 @@ define(['backbone'],function(Backbone){
            if (data.velocity > 0){
                data.posX += (Math.cos(data.angle) * data.velocity * deltaSeconds);
                data.posY += (Math.sin(data.angle) * data.velocity * deltaSeconds);
-               data.velocity = data.velocity.toPrecision(2);
            }
 
           for (var i=0; i < data.auxiliaryAngles.length;i++){
@@ -115,7 +114,7 @@ define(['backbone'],function(Backbone){
               if  (velocity > 0){
                   data.posX += (Math.cos(angle) * velocity * deltaSeconds);
                   data.posY += (Math.sin(angle) * velocity * deltaSeconds);
-                  data.auxiliaryVelocities[i] = velocity.toPrecision(2);
+                  data.auxiliaryVelocities[i] = velocity;
               }else{
                   data.auxiliaryVelocities[i] = 0;
               }
@@ -134,9 +133,6 @@ define(['backbone'],function(Backbone){
           }else if (data.posY < -radius){
              data.posY += (this.ZONE_HEIGHT+radius);
           }
-
-          data.posX = data.posX.toPrecision(6);
-          data.posY = data.posY.toPrecision(6);
 
           //Update last updated timestamp
           this.lastUpdated = currentTime;
@@ -159,9 +155,9 @@ define(['backbone'],function(Backbone){
                 (posY < this.ZONE_HEIGHT/2) ? deltaY += this.ZONE_HEIGHT : deltaY -= this.ZONE_HEIGHT;
             }
 
-            var distance = Math.abs(Math.sqrt((deltaX*deltaX)+(deltaY*deltaY)));
+            var distance = Math.sqrt((deltaX*deltaX)+(deltaY*deltaY));
 
-            if (distance > this.SIZE/2){
+            if (distance > this.SIZE/4){
                 var angle = Math.atan2(deltaY, deltaX);
                 var velocity = Math.sqrt(2*this.DECELERATION*distance);
 
@@ -172,7 +168,6 @@ define(['backbone'],function(Backbone){
                 auxiliaryVelocities[1] = velocity.toPrecision(2);
             }
 
-            console.log(distance);
             return this;
         }
     });
