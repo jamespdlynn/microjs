@@ -15,7 +15,7 @@ requirejs.config({
 //Use requires optimizer to build a single 'main' file containing all our modules, to be loaded client side
 requirejs.optimize({
         baseUrl : __dirname+"/lib",
-        name : 'client',
+        name : 'main',
         paths : {
             'microjs' : path.join(__dirname, '../../lib/micro'),
             'browser-buffer' : path.join(__dirname, '../../lib/browser-buffer'),

@@ -1,6 +1,5 @@
-define('client', ['browser-buffer', 'microjs', 'model/schemas', 'model/zone'],
-
-    function (Buffer, micro, schemas, Zone){
+define(['browser-buffer', 'microjs', 'model/schemas', 'model/zone', 'model/Player'],
+    function (Buffer, micro, schemas, Zone, Player){
 
         var WebSocket = window.WebSocket || window.MozWebSocket;
         return {
@@ -19,11 +18,12 @@ define('client', ['browser-buffer', 'microjs', 'model/schemas', 'model/zone'],
                     };
                     fileReader.readAsArrayBuffer(evt.data);
                 };
-                socket.onerror = function(err) {
-                    console.log('WebSocket error: '+ err);
-                };
+                socket.onclose = function(){
+                    console.log('Websocket closed');
+                    gameData.set("isRunning", false);
+                }
 
-                gameData.on("player:update", onPlayerUpdate);
+                gameData.on("change:player", onUserPlayerChange);
 
                 function readData(raw){
 
@@ -44,14 +44,17 @@ define('client', ['browser-buffer', 'microjs', 'model/schemas', 'model/zone'],
                             break;
 
                         case "Zone":
-                            gameData.currentZone.set(dataObj);
-                            gameData.currentZone.update(latency);
+                            dataObj = new Zone(dataObj).update(latency).toJSON();
+                            gameData.currentZone.set(dataObj, {easing:true});
                             break;
 
                         case "Player":
+                            dataObj = new Player(dataObj).update(latency).toJSON();
+                            gameData.currentZone.players.set(dataObj, {easing:true, remove:false});
+                            break;
+
                         case "PlayerUpdate":
-                            gameData.currentZone.players.set([dataObj]);
-                            gameData.currentZone.update(latency);
+                            gameData.currentZone.players.set(dataObj, {add:false, remove:false});
                             break;
 
                         default:
@@ -60,7 +63,7 @@ define('client', ['browser-buffer', 'microjs', 'model/schemas', 'model/zone'],
                     }
                 }
 
-                function onPlayerUpdate(){
+                function onUserPlayerChange(){
                     if (gameData.player && gameData.player.hasChanged()){
                         var buffer = micro.toBinary(gameData.player.toJSON(), "PlayerUpdate");
                         socket.send(buffer);
@@ -73,11 +76,3 @@ define('client', ['browser-buffer', 'microjs', 'model/schemas', 'model/zone'],
     }
 );
 
-//Main require function
-require(['model/game','view','client'], function(GameData, GameView, Client){
-    //Create global game data object
-    window.gameData = new GameData();
-
-    GameView.initialize();
-    Client.run();
-});

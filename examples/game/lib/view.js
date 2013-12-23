@@ -1,4 +1,4 @@
-define(['model/Zone'],function(Zone){
+define(['model/zone'],function(Zone){
 
     var requestAnimationFrame =  (function() {
        return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame ||
@@ -21,30 +21,24 @@ define(['model/Zone'],function(Zone){
             canvas.width = Zone.prototype.WIDTH;
             canvas.height =  Zone.prototype.HEIGHT;
 
-            canvas.addEventListener('mousemove', onMouseMove);
-            canvas.addEventListener('mousedown', onMouseDown);
 
+            gameData.on("change:isRunning", function(model, value){
+                if (value){
+                    canvas.addEventListener('mousemove', onMouseMove);
+                    canvas.addEventListener('mousedown', onMouseDown);
+                    onFrame();
+                }
+                else{
+                    canvas.removeEventListener('mousemove', onMouseMove);
+                    canvas.removeEventListener('mousedown', onMouseDown);
+                    canvas.removeEventListener('mouseup', onMouseUp);
+                    canvas.removeEventListener('mouseout', onMouseUp);
 
-            gameData.on("change:isRunning", function(){
-                onFrame();
+                    canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+                }
             });
 
             onFrame();
-        },
-
-        reset : function(){
-            gameData.off("change:isRunning");
-            gameData.set("isRunning", false);
-
-            canvas.removeEventListener('mousemove', onMouseMove);
-            canvas.removeEventListener('mousedown', onMouseDown);
-            canvas.removeEventListener('mouseup', onMouseUp);
-            canvas.removeEventListener('mouseout', onMouseUp);
-
-            var context = canvas.getContext("2d");
-            context.clearRect(0, 0, canvas.width, canvas.height);
-
-            canvas = undefined;
         }
     };
 
@@ -78,7 +72,7 @@ define(['model/Zone'],function(Zone){
             context.lineTo(display.radius, display.radius);
             context.lineTo(-display.radius, display.radius);
             context.lineTo(0, -display.radius);
-            context.fillStyle = '#FFFFFF';
+            context.fillStyle = (player.id == gameData.get("playerId")) ? "#00BF13" : "D10B08";
             context.fill();
 
             context.restore();
@@ -92,76 +86,67 @@ define(['model/Zone'],function(Zone){
         context.fillText("posY: "+data.posY, 10, canvas.height-100);
         context.fillText("angle: "+data.angle, 10, canvas.height-80);
         context.fillText("velocity: "+data.velocity, 10, canvas.height-60);
-        context.fillText("angle2: "+data.angle2, 10, canvas.height-40);
-        context.fillText("velocity2: "+data.velocity2, 10, canvas.height-20);
+        context.fillText("Auxiliary Angles: "+JSON.stringify(data.auxiliaryAngles), 10, canvas.height-40);
+        context.fillText("Auxiliary Velocities: "+JSON.stringify(data.auxiliaryVelocities), 10, canvas.height-20);
     }
 
-    var mouseX, mouseY, angleTimeout;
+    var mouseX=0, mouseY=0, mouseDown=false;
+    var updateTimeout;
+
     function onMouseMove(evt){
 
-        if (GameView.isRunning())
-        {
-            var rect = canvas.getBoundingClientRect();
-            mouseX = (evt.clientX - rect.left);
-            mouseY = (evt.clientY - rect.top);
+        var rect = canvas.getBoundingClientRect();
+        mouseX = (evt.clientX - rect.left);
+        mouseY = (evt.clientY - rect.top);
 
-            if (!angleTimeout){
-                angleTimeout = setTimeout(function(){
-                    var data = gameData.player.attributes;
-
-                    var deltaX = mouseX - data.posX ;
-                    var deltaY = mouseY - data.posY;
-
-
-                    if (Math.abs(deltaX) > gameData.player.SIZE || Math.abs(deltaY) > gameData.player.SIZE){
-
-                        var newAngle = Math.atan2(deltaY, deltaX);
-
-                        //Ignore minor angle changes
-                        if (Math.abs(newAngle - gameData.player.get("angle")) >= 0.2){
-                            gameData.player.update();
-                            gameData.player.set("angle", newAngle);
-                            gameData.trigger("player:update");
-                        }
-                    }
-
-                    angleTimeout = undefined;
-                }, 50);
-            }
+        if (!updateTimeout){
+            setTimeout(triggerUpdate, 100);
         }
     }
 
-    var accelerateTimeout;
-    function onMouseDown(){
-        if (GameView.isRunning() && !accelerateTimeout){
+    function onMouseDown(evt){
 
-            accelerateTimeout = setTimeout(function(){
-                gameData.player.update();
-                gameData.player.set("isAccelerating", true);
-                gameData.trigger("player:update");
+        var rect = canvas.getBoundingClientRect();
+        mouseX = (evt.clientX - rect.left);
+        mouseY = (evt.clientY - rect.top);
 
-                accelerateTimeout = undefined;
-            }, 200);
-
-            canvas.addEventListener('mouseup', onMouseUp);
-            canvas.addEventListener('mouseout', onMouseUp);
+        mouseDown = true;
+        if (!updateTimeout){
+            setTimeout(triggerUpdate, 100);
         }
+
+        canvas.addEventListener('mouseup', onMouseUp);
+        canvas.addEventListener('mouseout', onMouseUp);
     }
 
     function onMouseUp(){
-        if (accelerateTimeout){
-            clearTimeout(accelerateTimeout);
-            accelerateTimeout = undefined;
-        }else{
-            gameData.player.update();
-            gameData.player.set("isAccelerating", false);
-            gameData.trigger("player:update");
-        }
 
-        canvas.removeEventListener('mouseup', onMouseUp);
-        canvas.removeEventListener('mouseout', onMouseUp);
+       mouseDown = false;
+       if (!updateTimeout){
+           setTimeout(triggerUpdate, 100);
+       }
+
+       canvas.removeEventListener('mouseup', onMouseUp);
+       canvas.removeEventListener('mouseout', onMouseUp);
     }
 
+    function triggerUpdate(){
+
+        var player = gameData.player;
+
+        player.update();
+
+        var deltaX = mouseX - player.get("posX");
+        var deltaY = mouseY - player.get("posY");
+
+        if (Math.abs(deltaX) > player.SIZE || Math.abs(deltaY) > player.SIZE){
+            player.set({angle:Math.atan2(deltaY, deltaX), isAccelerating:mouseDown});
+        }else{
+            player.set({isAccelerating:mouseDown});
+        }
+
+        gameData.trigger("change:player");
+    }
 
     //Calculates display data (display data may be slightly different than actual data, as it allows for smoothing)
     function getDisplayData(player){

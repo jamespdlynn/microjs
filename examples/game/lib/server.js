@@ -3,8 +3,8 @@ define(["websocket", "microjs", "model/schemas","model/zone"], function(websocke
     var WebSocketServer = websocket.server;
 
     var MAX_CONNECTIONS = 10;
-    var NUM_PINGS = 3;
-    var UPDATE_INTERVAL = 500; //500 Milliseconds
+    var NUM_PINGS = 5;
+    var UPDATE_INTERVAL = 500; //Half a second
 
     var ServerZone = function (){
         //Incrementing id field, to give unique identification for new players
@@ -57,20 +57,22 @@ define(["websocket", "microjs", "model/schemas","model/zone"], function(websocke
        this.zone.players.remove(conn.id);
        this.connections.splice(this.connections.indexOf(conn), 1);
 
-       if (this.connections.length == 0){
+       if (this.connections.length > 0){
            clearInterval(this.updateInterval);
            this.updateInterval = undefined;
        }
     };
 
-    ServerZone.prototype.updatePlayer = function(conn, data){
-        var player = this.zone.players.get(conn.id);
+    ServerZone.prototype.updatePlayer = function(data){
+
+        var player = this.zone.players.get(data.id);
         player.update();
+
         player.set(data);
 
         if (player.hasChanged()){
             for (var i=0; i < this.connections.length; i++){
-                send(this.connections[i], "Player", player.toJSON());
+                send(this.connections[i], "PlayerUpdate", data);
             }
         }
     };
@@ -129,6 +131,7 @@ define(["websocket", "microjs", "model/schemas","model/zone"], function(websocke
                                    //If we have not initialized yet kick that off
                                    if (!initialized){
                                        serverZone.add(connection);
+                                       initialized = true;
                                    }
                                }
 
@@ -137,7 +140,8 @@ define(["websocket", "microjs", "model/schemas","model/zone"], function(websocke
                                break;
 
                            case "PlayerUpdate":
-                               serverZone.updatePlayer(connection, data);
+                               data.id = connection.id;
+                               serverZone.updatePlayer(data);
                                break;
 
                            default:
