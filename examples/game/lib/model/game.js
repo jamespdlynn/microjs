@@ -4,7 +4,6 @@ define(['backbone','model/zone'], function(Backbone, Zone){
 
         defaults : {
             playerId : 0, //The player id of the user
-            currentZone : {}, //The data for the zone the user is in
             isRunning : false //If this game is currently running
         },
 
@@ -43,6 +42,12 @@ define(['backbone','model/zone'], function(Backbone, Zone){
             }
 
             return Backbone.Model.prototype.set.call(this, attrs, options);
+        },
+
+        reset : function(){
+            this.currentZone = undefined;
+            this.player = undefined;
+            this.set("isRunning",false);
         }
     });
 
