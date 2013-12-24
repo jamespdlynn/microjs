@@ -65,14 +65,16 @@ define(["websocket", "microjs", "model/schemas","model/zone"], function(websocke
 
     ServerZone.prototype.updatePlayer = function(data){
 
-        var player = this.zone.players.get(data.id);
-        player.update();
-
+        var player = this.zone.players.get(data.id).update();
         player.set(data);
 
         if (player.hasChanged()){
             for (var i=0; i < this.connections.length; i++){
-                send(this.connections[i], "PlayerUpdate", data);
+                var connection = this.connections[i];
+                if (connection.id !== player.id){
+                    send(connection, "PlayerUpdate", data);
+                }
+
             }
         }
     };

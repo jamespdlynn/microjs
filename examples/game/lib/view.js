@@ -1,6 +1,6 @@
 define(['model/zone'],function(Zone){
 
-    var canvas, currentAngle, mouseDown, updateTimeout;
+    var canvas, currentAngle, mouseDown;
 
     var requestAnimationFrame =  (function() {
        return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame ||
@@ -82,12 +82,11 @@ define(['model/zone'],function(Zone){
 
             context.font = "11px sans-serif";
             context.fillStyle = '#FFFFFF';
-            context.fillText("posX: "+display.posX, 10, canvas.height-120);
-            context.fillText("posY: "+display.posY, 10, canvas.height-100);
-            context.fillText("angle: "+data.angle, 10, canvas.height-80);
-            context.fillText("velocity: "+data.velocity, 10, canvas.height-60);
-            context.fillText("Auxiliary Angles: "+JSON.stringify(data.auxiliaryAngles), 10, canvas.height-40);
-            context.fillText("Auxiliary Velocities: "+JSON.stringify(data.auxiliaryVelocities), 10, canvas.height-20);
+            context.fillText("PosX: "+display.posX, 10, canvas.height-100);
+            context.fillText("PosY: "+display.posY, 10, canvas.height-80);
+            context.fillText("Angle: "+data.angle, 10, canvas.height-60);
+            context.fillText("Velocity: "+data.velocity, 10, canvas.height-40);
+            context.fillText("Auxiliary Angles: "+JSON.stringify(data.auxiliaryAngles), 10, canvas.height-20);
         }
     };
 
@@ -95,13 +94,15 @@ define(['model/zone'],function(Zone){
 
     //Canvas Event Listeners
     function onMouseDown(evt){
-        mouseDown = true;
+
         onMouseMove(evt);
+        mouseDown = true;
     }
 
     function onMouseUp(evt){
-       mouseDown = false;
+
        onMouseMove(evt);
+       mouseDown = false;
     }
 
     function onMouseMove(evt){
@@ -111,29 +112,29 @@ define(['model/zone'],function(Zone){
         var player = gameData.player;
 
         var deltaX = evt.clientX - rect.left - player.get("posX");
-        var deltaY = evt.clientY - rect.left - player.get("posY");
-
+        var deltaY = evt.clientY - rect.top - player.get("posY");
 
         if (Math.abs(deltaX) > player.SIZE || Math.abs(deltaY) > player.SIZE){
             currentAngle = Math.atan2(deltaY, deltaX);
         }
-
-        //Don't update this angle straight away, rather wait a few milliseconds first (prevents triggering way too many player updates)
-        updateTimeout = updateTimeout || setTimeout(triggerUpdate, 200);
     }
 
-    function triggerUpdate(){
+
+    setInterval(function(){
+        if (!currentAngle) return;
+
+        var player = gameData.player;
+
         //Set the user player's new data according to the user's interaction with the canvas
-        gameData.player.set({angle:currentAngle, isAccelerating:mouseDown});
-        if (gameData.player.hasChanged()){
+        player.set({angle:currentAngle, isAccelerating:mouseDown});
+        if (player.hasChanged()){
             //Trigger a change:player event to have the updated data sent to the server
             gameData.trigger("change:player");
+            console.log("CHANGE!");
         }
 
-        //Reset variables
         currentAngle = undefined;
-        updateTimeout = undefined;
-    }
+    }, 200);
 
     //Calculates and retrieves player display data (display data may be slightly different than actual data, as it allows for smoothing)
     function getDisplayData(player){
@@ -143,22 +144,20 @@ define(['model/zone'],function(Zone){
         var display = player.display = (player.display || {angle : data.angle, radius : player.SIZE/2});
 
         //Smooth angle angle updates, by incrementing the change in steps
-        if (isUser && currentAngle){
-           display.angle = currentAngle;
-        }
+        var angle = (isUser && currentAngle) ? currentAngle : data.angle;
 
-        else if (display.angle != data.angle){
-            var deltaAngle = angleDiff(data.angle, display.angle);
-            if (deltaAngle > 0.1){
-                var step = deltaAngle > 0.4 ? deltaAngle/4 : 0.1;
-                if (angleDiff(data.angle, display.angle+step) < deltaAngle){
+        if (display.angle != angle){
+            var deltaAngle = angleDiff(angle, display.angle);
+            if (deltaAngle > 0.05){
+                var step = deltaAngle > 0.3 ? deltaAngle/6 : 0.05;
+                if (angleDiff(angle, display.angle+step) < deltaAngle){
                     display.angle += step;
                 }else{
                     display.angle -= step;
                 }
             }
             else{
-                display.angle = data.angle;
+                display.angle = angle;
             }
         }
 

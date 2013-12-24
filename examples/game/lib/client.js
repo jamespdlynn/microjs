@@ -53,7 +53,7 @@ define(['browser-buffer', 'microjs', 'model/schemas', 'model/zone', 'model/Playe
 
                 case "GameData" :
                     //Initialize the game data and update the each of the zone's player data according to latency
-                    gameData.set(dataObj, {silent:true});
+                    gameData.set(dataObj);
                     currentZone = gameData.currentZone.update(latency);
                     break;
 

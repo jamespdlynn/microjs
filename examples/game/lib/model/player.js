@@ -5,6 +5,29 @@ define(['backbone'],function(Backbone){
         return  Math.round(this * multiplier) /multiplier;
     };
 
+
+    var sin = Math.sin, cos = Math.cos;
+    var sines = {};
+    for (var i=-Math.PI; i < Math.PI; i+=0.1){
+        i = i.toPrecision(1);
+        sines[i] = sin(i);
+    }
+    var cosines = {};
+    for (var j=-Math.PI; j <= Math.PI; j+=0.1){
+        j = j.toPrecision(1);
+        cosines[j] = cos(j);
+    }
+
+    Math.sin = function(val){
+        return sines[val] || sin(val);
+    };
+
+    Math.cos = function(val){
+        return cosines[val] || cos(val);
+    };
+
+
+
     var addAngles = function(a1, v1, a2, v2){
         if (v1 == 0){
             return {angle:a2, velocity:v2}
@@ -129,15 +152,15 @@ define(['backbone'],function(Backbone){
            var velocity = data.velocity;
 
            //Update current velocity and increment position
+           velocity  =  data.isAccelerating ? Math.min(velocity+deltaAcc,this.MAX_VELOCITY) : Math.max(velocity-deltaDec, 0);
+
            if (velocity > 0){
-               velocity =  data.isAccelerating ? Math.min(velocity+deltaAcc,this.MAX_VELOCITY) : Math.max(velocity-deltaDec, 0);
                distance = velocity * deltaSeconds;
-
-
                data.posX += (Math.cos(data.angle) * distance);
                data.posY += (Math.sin(data.angle) * distance);
-               data.velocity = velocity;
            }
+
+          data.velocity = velocity;
 
           //Update auxiliary velocities and increment position
           var i = data.auxiliaryAngles.length-1;
