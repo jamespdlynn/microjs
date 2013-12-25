@@ -5,7 +5,6 @@ define(['backbone'],function(Backbone){
         return  Math.round(this * multiplier) /multiplier;
     };
 
-
     var sin = Math.sin, cos = Math.cos;
     var sines = {};
     for (var i=-Math.PI; i < Math.PI; i+=0.1){
@@ -26,8 +25,6 @@ define(['backbone'],function(Backbone){
         return cosines[val] || cos(val);
     };
 
-
-
     var addAngles = function(a1, v1, a2, v2){
         if (v1 == 0){
             return {angle:a2, velocity:v2}
@@ -46,13 +43,20 @@ define(['backbone'],function(Backbone){
         return {angle:angle, velocity:velocity};
     };
 
+    var getVelocity = function(vi,a,t){
+        return Math.max(vi + (a*t),0);
+    };
+
+    var getDistance = function(vi, vf, t){
+        return ((vi+vf)/2)*t;
+    };
+
     var Player = Backbone.Model.extend({
 
         //Constants
         SIZE : 25,  // px
-        MAX_VELOCITY : 200, // px/s
-        ACCELERATION : 100,  // px/s^2
-        DECELERATION : 50,
+        ACCELERATION : 80,  // px/s^2
+        DECELERATION : -40,
 
         defaults : {
             posX : 0,
@@ -63,6 +67,7 @@ define(['backbone'],function(Backbone){
         },
 
         initialize : function(){
+            this.intialized = true;
             this.lastUpdated = new Date().getTime();  //Internal timestamp of last update
 
             var data = this.attributes;
@@ -72,8 +77,7 @@ define(['backbone'],function(Backbone){
 
         /*** @override*/
         set: function(key, val, options) {
-
-            if (!this.lastUpdated){
+            if (!this.intialized){
                 return Backbone.Model.prototype.set.call(this,key,val,options);
             }
 
@@ -93,38 +97,38 @@ define(['backbone'],function(Backbone){
 
             for (var key in attrs){
 
-               //If this set call includes an angle change, do some additional logic
-               if (key === "angle"){
+                //If this set call includes an angle change, do some additional logic
+                if (key === "angle"){
 
-                   var angle = attrs[key].toPrecision(1);
+                    var angle = attrs[key].toPrecision(1);
 
-                   if (angle !== data.angle){
+                    if (angle !== data.angle){
 
-                       //Update the auxiliary angles and velocities by adding to them the current angle/velocity
-                       if (!attrs.hasOwnProperty("auxiliaryAngles")){
-                           var auxiliaryAngles = data.auxiliaryAngles;
-                           var auxiliaryVelocities = data.auxiliaryVelocities;
+                        //Update the auxiliary angles and velocities by adding to them the current angle/velocity
+                        if (!attrs.hasOwnProperty("auxiliaryAngles")){
+                            var auxiliaryAngles = data.auxiliaryAngles;
+                            var auxiliaryVelocities = data.auxiliaryVelocities;
 
-                           var auxiliaryData = addAngles(data.angle, data.velocity, auxiliaryAngles[0], auxiliaryVelocities[0]);
-                           auxiliaryAngles[0] = auxiliaryData.angle;
-                           auxiliaryVelocities[0] = auxiliaryData.velocity;
-                       }
+                            var auxiliaryData = addAngles(data.angle, data.velocity, auxiliaryAngles[0], auxiliaryVelocities[0]);
+                            auxiliaryAngles[0] = auxiliaryData.angle;
+                            auxiliaryVelocities[0] = auxiliaryData.velocity;
+                        }
 
-                       //Reset the current velocity to 0
-                       if (!attrs.hasOwnProperty("velocity")){
-                           data.velocity = 0;
-                       }
+                        //Reset the current velocity to 0
+                        if (!attrs.hasOwnProperty("velocity")){
+                            data.velocity = 0;
+                        }
 
-                       data.angle = changed.angle = angle;
-                   }
-               }
-               else if (data[key] !== attrs[key]){
-                   //Ignore position changes if easing boolean is passed through options
-                   if (!options.easing || (key !== "posX" && key !== "posY")){
-                       data[key] = changed[key] = attrs[key];
-                   }
+                        data.angle = changed.angle = angle;
+                    }
+                }
+                else if (data[key] !== attrs[key]){
+                    //Ignore position changes if easing boolean is passed through options
+                    if (!options.easing || (key !== "posX" && key !== "posY")){
+                        data[key] = changed[key] = attrs[key];
+                    }
 
-               }
+                }
             }
 
             if (options.easing){
@@ -138,70 +142,77 @@ define(['backbone'],function(Backbone){
 
         update : function(deltaTime){
 
-           var currentTime = new Date().getTime();
-           var data = this.attributes;
+            var currentTime = new Date().getTime();
+            deltaTime = deltaTime || currentTime-this.lastUpdated;
 
-           //Calculate deltas based on how much time has passed since last update
-           var deltaSeconds = (deltaTime || (currentTime - this.lastUpdated))/1000;
-           var distance = 0;
+            if (!deltaTime) return this;
 
-           var deltaAcc = this.ACCELERATION*deltaSeconds;
-           var deltaDec = this.DECELERATION*deltaSeconds;
+            //Calculate deltas based on how much time has passed since last update
+            var data = this.attributes;
 
-           var angle = data.angle;
-           var velocity = data.velocity;
+            var deltaSeconds = deltaTime/1000;
+            var acceleration = this.ACCELERATION;
+            var deceleration = this.DECELERATION;
 
-           //Update current velocity and increment position
-           velocity  =  data.isAccelerating ? Math.min(velocity+deltaAcc,this.MAX_VELOCITY) : Math.max(velocity-deltaDec, 0);
+            var newVelocity, distance;
 
-           if (velocity > 0){
-               distance = velocity * deltaSeconds;
-               data.posX += (Math.cos(data.angle) * distance);
-               data.posY += (Math.sin(data.angle) * distance);
-           }
+            if (data.isAccelerating){
+                newVelocity = getVelocity(data.velocity, acceleration, deltaSeconds);            }
+            else{
+                newVelocity = getVelocity(data.velocity, deceleration, deltaSeconds);
+            }
 
-          data.velocity = velocity;
+            distance = getDistance(data.velocity, newVelocity, deltaSeconds);
 
-          //Update auxiliary velocities and increment position
-          var i = data.auxiliaryAngles.length-1;
-          do{
-              angle = data.auxiliaryAngles[i];
-              velocity = data.auxiliaryVelocities[i];
+            if (distance > 0){
+                data.posX += (Math.cos(data.angle) * distance);
+                data.posY += (Math.sin(data.angle) * distance);
+            }
 
-              if (velocity > 0){
-                  //Auxiliary velocities are always decelerating
-                  velocity = Math.max(data.auxiliaryVelocities[i]-deltaDec, 0);
-                  distance = velocity * deltaSeconds;
+            data.velocity = newVelocity;
 
-                  data.posX += (Math.cos(angle) * distance);
-                  data.posY += (Math.sin(angle) * distance);
-                  data.auxiliaryVelocities[i] = velocity;
-              }
-          }while(i--);
+            //Update auxiliary velocities and increment position
+            var i = data.auxiliaryAngles.length-1;
+            do{
+                var angle = data.auxiliaryAngles[i];
+                var velocity = data.auxiliaryVelocities[i];
 
-          //We need to check that we're still within the boundary of the zone,
-          //and if not move the player to the opposite end
+                if (velocity > 0){
+                    //Auxiliary velocities are always decelerating
+                    newVelocity = getVelocity(velocity, deceleration, deltaSeconds);
+                    distance = getDistance(velocity, newVelocity, deltaSeconds);
 
-          var radius = this.SIZE/2;
-          var maxPosX =  this.ZONE_WIDTH+radius;
-          var maxPosY =  this.ZONE_HEIGHT+radius;
+                    if (distance > 0){
+                        data.posX += (Math.cos(angle) * distance);
+                        data.posY += (Math.sin(angle) * distance);
+                    }
 
-          if (data.posX > maxPosX){
-             data.posX -= maxPosX;
-          }else if (data.posX < -radius){
-             data.posX += maxPosX;
-          }
+                    data.auxiliaryVelocities[i] = newVelocity;
+                }
+            }while(i--);
 
-          if (data.posY > maxPosY){
-             data.posY -= maxPosY;
-          }else if (data.posY < -radius){
-             data.posY += maxPosY;
-          }
+            //We need to check that we're still within the boundary of the zone,
+            //and if not move the player to the opposite end
+            var radius = this.SIZE/2;
+            var maxPosX =  this.ZONE_WIDTH+radius;
+            var maxPosY =  this.ZONE_HEIGHT+radius;
 
-          //Update last updated timestamp
-          this.lastUpdated = currentTime;
+            if (data.posX > maxPosX){
+                data.posX -= maxPosX;
+            }else if (data.posX < -radius){
+                data.posX += maxPosX;
+            }
 
-          return this;
+            if (data.posY > maxPosY){
+                data.posY -= maxPosY;
+            }else if (data.posY < -radius){
+                data.posY += maxPosY;
+            }
+
+            //Update last updated timestamp
+            this.lastUpdated = currentTime;
+
+            return this;
         },
 
         /**
@@ -227,13 +238,16 @@ define(['backbone'],function(Backbone){
 
             var distance = Math.sqrt((deltaX*deltaX)+(deltaY*deltaY));
 
-            if (distance > this.SIZE/4){
+            if (distance > this.SIZE/2){
+
+                console.log(distance);
+
                 var data = this.attributes;
                 data.auxiliaryAngles[1] = Math.atan2(deltaY, deltaX).toPrecision(1);
-                data.auxiliaryVelocities[1] = Math.sqrt(2*this.DECELERATION*distance);
-            }
+                data.auxiliaryVelocities[1] = Math.sqrt(-2*this.DECELERATION*distance);
 
-            return this;
+                return this;
+            }
         }
     });
 

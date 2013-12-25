@@ -22,7 +22,7 @@ define(['browser-buffer', 'microjs', 'model/schemas', 'model/zone', 'model/Playe
                     fileReader.readAsArrayBuffer(evt.data);
                 };
                 socket.onclose = function(){
-                    console.log('Websocket closed');
+                    console.log("Websocket closed");
                     gameData.off("change:player",onUserPlayerChange);
                     gameData.reset();
                     socket = undefined;
@@ -83,11 +83,23 @@ define(['browser-buffer', 'microjs', 'model/schemas', 'model/zone', 'model/Playe
         }
 
         //When a user player change event is caught, send a "PlayerUpdate" to the server
-        function onUserPlayerChange(){
-            var buffer = micro.toBinary(gameData.player.toJSON(), "PlayerUpdate");
-            socket.send(buffer);
-        }
+        function onUserPlayerChange(data){
 
+            var player = gameData.player;
+            data.angle = data.angle.toPrecision(1);
+
+            //Check if data contains different values
+            if (player.get("angle") !== data.angle || player.get("isAccelerating") !== data.isAccelerating){
+                var buffer = micro.toBinary(data, "PlayerUpdate");
+                socket.send(buffer);
+
+                console.log(latency);
+                //Wait until sending this data to the player, in order to allow for latency
+                setTimeout(function(){
+                    player.set(data);
+                }, latency);
+            }
+        }
 
         return Client;
 
