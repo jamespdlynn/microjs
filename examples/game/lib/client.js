@@ -22,7 +22,6 @@ define(['browser-buffer', 'microjs', 'model/schemas', 'model/zone', 'model/Playe
                     fileReader.readAsArrayBuffer(evt.data);
                 };
                 socket.onclose = function(){
-                    console.log("Websocket closed");
                     gameData.off("change:player",onUserPlayerChange);
                     gameData.reset();
                     socket = undefined;
@@ -58,6 +57,8 @@ define(['browser-buffer', 'microjs', 'model/schemas', 'model/zone', 'model/Playe
                     break;
 
                 case "Zone":
+                    if (!gameData.get("isRunning")) return;
+
                     //Use dummy Zone Model to first update the data values according to latency
                     dataObj = new Zone(dataObj).update(latency).toJSON();
                     //Set easing to true so we don't simply override each existing player's x,y coordinates
@@ -65,13 +66,18 @@ define(['browser-buffer', 'microjs', 'model/schemas', 'model/zone', 'model/Playe
                     break;
 
                 case "Player":
+                    if (!gameData.get("isRunning")) return;
+
                     //Use dummy Player Model to update the data values according to latency
                     dataObj = new Player(dataObj).update(latency).toJSON();
+
                     //Set easing to true so we don't simply override this player's x,y coordinates (if they exist)
                     currentZone.players.set(dataObj, {easing:true, remove:false, silent:true});
                     break;
 
                 case "PlayerUpdate":
+                    if (!gameData.get("isRunning")) return;
+
                     //A player update contains minimal player information, so we don't need to worry about easing
                     currentZone.players.set(dataObj, {add:false, remove:false, silent:true});
                     break;
@@ -86,15 +92,13 @@ define(['browser-buffer', 'microjs', 'model/schemas', 'model/zone', 'model/Playe
         function onUserPlayerChange(data){
 
             var player = gameData.player;
-            data.angle = data.angle.toPrecision(1);
 
             //Check if data contains different values
-            if (player.get("angle") !== data.angle || player.get("isAccelerating") !== data.isAccelerating){
+            if (player.get("angle") !== data.angle.toPrecision(1) || player.get("isAccelerating") !== data.isAccelerating){
                 var buffer = micro.toBinary(data, "PlayerUpdate");
                 socket.send(buffer);
 
-                console.log(latency);
-                //Wait until sending this data to the player, in order to allow for latency
+                //Allow for latency before setting these changes on the player
                 setTimeout(function(){
                     player.set(data);
                 }, latency);

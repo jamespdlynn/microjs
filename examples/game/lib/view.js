@@ -59,12 +59,14 @@ define(['model/zone'],function(Zone){
 
     //Game Loop
     function onFrame(){
-
         if (!GameView.isRunning()) return;
 
         //Every ten frames trigger a player update
         if (++frameCount >= 10){
-            triggerPlayerUpdate();
+            if (currentAngle){
+                gameData.trigger("change:player", {angle:currentAngle, isAccelerating:mouseDown});
+                currentAngle = undefined;
+            }
             frameCount = 0;
         }
 
@@ -79,7 +81,8 @@ define(['model/zone'],function(Zone){
         var players = gameData.currentZone.players;
 
         //Loop through all players in current zone
-        for (var i=0; i < players.length; i++){
+        var i = players.length;
+        while (i--){
 
             var player = players.models[i].update();  //Update this player's coordinates
             var display = getDisplayData(player);  //Get the display data
@@ -136,14 +139,6 @@ define(['model/zone'],function(Zone){
         }
     }
 
-
-    function triggerPlayerUpdate(){
-        if (!currentAngle) return;
-
-        gameData.trigger("change:player", {angle:currentAngle, isAccelerating:mouseDown});
-        currentAngle = undefined;
-    }
-
     //Calculates and retrieves player display data (display data may be slightly different than actual data, as it allows for smoothing)
     function getDisplayData(player){
 
@@ -172,7 +167,7 @@ define(['model/zone'],function(Zone){
         display.posY = Math.round(data.posY);
 
         //Set color depending on whether this player is the current user
-        display.color = isUser ? "#00BF13" : "D10B08";
+        display.color = isUser ? "#00BF13" : "#D10B08";
 
         return display;
     }

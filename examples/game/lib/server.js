@@ -6,7 +6,7 @@ define(["websocket", "microjs", "model/schemas","model/zone"], function(websocke
     var MAX_CONNECTIONS = 10;
     var MAX_PINGS = 5;
     var UPDATE_INTERVAL = 1000; //milliseconds
-    var FAKE_LATENCY = 150; //milliseconds (used for local debugging only)
+    var FAKE_LATENCY = 0; //milliseconds (used for local debugging only)
 
     /**
      * @constructor
@@ -282,7 +282,7 @@ define(["websocket", "microjs", "model/schemas","model/zone"], function(websocke
             sumLatency += (timestamps[i] - timestamps[i-1])/2;
         }
 
-        return (sumLatency/length);
+        return (sumLatency/(length-1));
     }
 
 });

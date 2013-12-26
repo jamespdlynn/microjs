@@ -19,8 +19,8 @@ requirejs.optimize({
         paths : {
             'microjs' : path.join(__dirname, '../../lib/micro'),
             'browser-buffer' : path.join(__dirname, '../../lib/browser-buffer'),
-            'underscore' : path.join(require.resolve('backbone'), '../node_modules/underscore/underscore-min'),
-            'backbone' : path.join(require.resolve('backbone'), '../backbone-min')
+            'underscore' : path.join(require.resolve('backbone'), '../node_modules/underscore/underscore'),
+            'backbone' : path.join(require.resolve('backbone'), '../backbone')
         },
         shim : {
             'backbone': {

@@ -1,14 +1,10 @@
-define(['backbone','model/player'], function(Backbone,Player){
+define(['backbone','model/player','model/constants'], function(Backbone,Player,Constants){
 
     var PlayerCollection = Backbone.Collection.extend({
         model : Player
     });
 
     var Zone = Backbone.Model.extend({
-
-        //Constants
-        WIDTH : 1024,
-        HEIGHT : 512,
 
         defaults : {
             id : 0,
@@ -46,10 +42,10 @@ define(['backbone','model/player'], function(Backbone,Player){
         },
 
         update : function(deltaTime){
-            for (var i=0; i < this.players.length; i++){
+            var i = this.players.length;
+            while(i--){
                 this.players.models[i].update(deltaTime);
             }
-
             return this;
         },
 
@@ -57,11 +53,7 @@ define(['backbone','model/player'], function(Backbone,Player){
         toJSON : function(){
             return {id:this.id, players: this.players.toJSON()};
         }
-    });
-
-
-    Player.prototype.ZONE_WIDTH = Zone.prototype.WIDTH;
-    Player.prototype.ZONE_HEIGHT = Zone.prototype.HEIGHT;
+    }).extend(Constants.Zone);
 
     return Zone;
 });
