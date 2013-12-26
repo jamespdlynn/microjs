@@ -159,7 +159,7 @@
             test.equals(carBuffer.length, 6, "Car buffer has incorrect length");
 
             newCarData = micro.toJSON(carBuffer, "Car");
-            test.equals(Object.keys(newCarData).length, 2, "Car has incorrect number or keys");
+            test.equals(Object.keys(newCarData).length, 1, "Car has incorrect number or keys");
             test.equals(newCarData.make, "Ford", "Car has incorrect value for 'make'");
 
         });

@@ -121,7 +121,7 @@
             test.equals(floatBuffer.length, 3, "Float Buffer has correct length");
     
             newFloatData = micro.toJSON(floatBuffer, "Float");
-            test.equals(Object.keys(newFloatData).length,3, "New Float Data has correct number of properties");
+            test.equals(Object.keys(newFloatData).length,2, "New Float Data has correct number of properties");
     
         });
     
