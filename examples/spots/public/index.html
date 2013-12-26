@@ -43,11 +43,14 @@
 
         <script type="text/javascript">
 
-            micro.register({
-                count: "uint8"
-            }, "ActiveUsers");
+            var WebSocket = WebSocket || MozWebSocket;
 
-            micro.register({
+            //Register our schemas
+            var activeUsersSchema = {
+                count: "uint8"
+            };
+
+            var spotSchema = {
                 posX : "ufloat16",
                 posY : "ufloat16",
                 radius : "uint8",
@@ -55,17 +58,22 @@
                     type: "object",
                     schema:{R:"uint8", G:"uint8",B:"uint8"}
                 }
-            }, "Spot");
+            };
 
-            var WebSocket = WebSocket || MozWebSocket;
+            micro.register(activeUsersSchema, "ActiveUsers");
+            micro.register(spotSchema, "Spot");
+
 
 
             window.onload = function(){
+
+                //Retrieve our element nodes
                 var canvas = document.getElementById("canvas");
                 var count = document.getElementById("count");
                 var radius =  document.getElementById("radius");
                 var R = document.getElementById("R"), G = document.getElementById("G"), B = document.getElementById("B");
 
+                //Set canvas size
                 canvas.width = window.innerWidth;
                 canvas.height = window.innerHeight;
                 window.onresize = function(){
@@ -73,34 +81,49 @@
                     canvas.height = window.innerHeight;
                 };
 
+                //Give inputs random values
                 radius.value = Math.ceil(Math.random()*50);
                 R.value = Math.floor(Math.random()*256);
                 G.value = Math.floor(Math.random()*256);
                 B.value = Math.floor(Math.random()*256);
 
+
+                //Connect to our websocket server
                 var socket = new WebSocket( "ws://"+window.location.host, 'microjs');
 
+                //When socket connects
                 socket.onopen = function(){
+
+                    //When canvas is clicked
                     canvas.addEventListener('click', function(evt){
                         var rect = canvas.getBoundingClientRect();
-                        var dot = {
+
+                        //Create a spot object using location of click, and data values of inputs
+                        var spot = {
                             posX : evt.clientX - rect.left,
                             posY : evt.clientY - rect.top,
                             color : {R : parseInt(R.value)%256, G : parseInt(G.value)%256, B : parseInt(B.value)%256},
                             radius : parseInt(radius.value)
                         };
 
-                        var buffer = micro.toBinary(dot, "Spot");
+                        //Serialize the object and send it to the server (we'll render it on response)
+                        var buffer = micro.toBinary(spot, "Spot");
                         socket.send(buffer);
                     });
                 };
 
+                //When data packet is received from server
                 socket.onmessage = function(evt) {
+
+                    //Use a file reader to parse the received Blob into an ArrayBuffer
                     var fileReader = new FileReader();
                     fileReader.onload = function(){
+
+                        //Parse the data object into JSON
                         var buffer = new Buffer(this.result);
                         var json = micro.toJSON(buffer);
 
+                        //If object is of type 'Spot', render it onto the canvas using its data values
                         if (json._type === "Spot"){
                             var context = canvas.getContext("2d");
                             context.beginPath();
@@ -108,16 +131,16 @@
                             context.fillStyle ="rgb("+json.color.R+","+json.color.G+","+json.color.B+")";
                             context.fill();
                         }
+                        //If object is of type 'ActiveUsers' update the active users count value on page
                         else if (json._type === "ActiveUsers"){
                             count.innerHTML = json.count;
                         }
-                        else{
-                            console.log("Unknown type: "+json._type)
-                        }
                     };
+
                     fileReader.readAsArrayBuffer(evt.data);
                 };
 
+                //When socket closes
                 socket.onclose = function(){
                     canvas.removeEventListener("click");
                 };
@@ -127,7 +150,7 @@
     </head>
     <body>
         <h1>MicroJS Spots Demo</h1>
-        <h3>Click to make spots! (open in multiple windows/tabs)</h3>
+        <h3>Click to make spots! (Open in multiple windows/tabs)</h3>
 
         <canvas id="canvas"></canvas>
 
