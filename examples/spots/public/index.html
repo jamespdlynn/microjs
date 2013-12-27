@@ -50,6 +50,8 @@
                 count: "uint8"
             };
 
+            micro.register(activeUsersSchema, "ActiveUsers");
+
             var spotSchema = {
                 posX : "ufloat16",
                 posY : "ufloat16",
@@ -60,10 +62,7 @@
                 }
             };
 
-            micro.register(activeUsersSchema, "ActiveUsers");
             micro.register(spotSchema, "Spot");
-
-
 
             window.onload = function(){
 
@@ -86,7 +85,6 @@
                 R.value = Math.floor(Math.random()*256);
                 G.value = Math.floor(Math.random()*256);
                 B.value = Math.floor(Math.random()*256);
-
 
                 //Connect to our websocket server
                 var socket = new WebSocket( "ws://"+window.location.host, 'microjs');
@@ -161,7 +159,7 @@
             <label for="radius">Radius:</label><input id="radius" type="text" min="1" max="50" pattern="/$[0-9]*^/" maxlength="2">px
         </form>
 
-        <div id="activeUsers">Num Active Users: <span id="count">0</span></div>
+        <div id="activeUsers">Num Active Users: <span id="count"></span></div>
 
     </body>
 </html>

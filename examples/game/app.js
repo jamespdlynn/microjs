@@ -1,18 +1,23 @@
+// Micro JS Game Example
+// (c) 2010-2011 James Lynn <james.lynn@aristobotgames.com>, Aristobot LLC.
+
 var http = require("http"),
     express = require("express"),
     path = require('path'),
     requirejs = require('requirejs');
 
+//Use require js from here on out to load our modules instead of node's require function.
+//This will allow us to share some of the same modules both client and server side.
 requirejs.config({
     baseUrl : __dirname+"/lib",
     nodeRequire : require,
-    //This line is unneeded when we have microjs as a node module
+    //Setting a path to microjs is unnecessary when we have microjs included a node module
     paths : {
         'microjs' : path.join(__dirname, '../../lib/micro')
     }
 });
 
-//Use requires optimizer to build a single 'main' file containing all our modules, to be loaded client side
+//Use requires optimizer to build a single 'main' file to our public directory for the client to run
 requirejs.optimize({
         baseUrl : __dirname+"/lib",
         name : 'main',
@@ -33,7 +38,7 @@ requirejs.optimize({
         },
         findNestedDependencies : true,
         out : path.join(__dirname, "/public/main.js"),
-        optimize : 'none'
+        optimize : 'uglify2'
     },
 
     function(buildResponse){
@@ -49,15 +54,12 @@ app.use(express.logger('dev'));
 app.use(express.errorHandler());
 app.use(express.static(__dirname+"/public"));
 
-var httpServer = http.createServer(app),
-    port = process.env.PORT || 3000;
+var port = process.argv[2] || process.env.PORT || 3000;
+var httpServer = http.createServer(app).listen(port, function(){
+    console.log('Express server listening on port ' +port);
+});
 
 requirejs(["server"], function(server){
-
-    httpServer.listen(port, function(){
-        console.log('Express server listening on port ' +port);
-    });
-
     server.run(httpServer);
 });
 

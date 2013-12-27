@@ -1,3 +1,6 @@
+// Micro JS Spots Example
+// (c) 2010-2011 James Lynn <james.lynn@aristobotgames.com>, Aristobot LLC.
+
 var http = require("http"),
     express = require("express"),
     micro = require("../../lib/micro");
@@ -19,6 +22,8 @@ var activeUsersSchema = {
     count: "uint8"
 };
 
+micro.register(activeUsersSchema, "ActiveUsers");
+
 var spotSchema = {
     posX : "ufloat16",
     posY : "ufloat16",
@@ -29,7 +34,6 @@ var spotSchema = {
     }
 };
 
-micro.register(activeUsersSchema, "ActiveUsers");
 micro.register(spotSchema, "Spot");
 
 var MAX_CONNECTIONS = 255;
