@@ -1,0 +1,38 @@
+{
+  "name": "microjs",
+  "description": "Binary protocol buffer for javascript",
+  "version": "1.0",
+  "author": {
+    "name": "James Lynn",
+    "email": "james.lynn@aristobotgames.com"
+  },
+  "devDependencies": {
+    "node-minify": "*",
+    "nodeunit": "*",
+    "jade": "~0.30.0",
+    "hjs": "~0.0.6",
+    "stylus": "~0.40.0",
+    "should": "~2.0.2",
+    "connect-redis": "~1.4.5",
+    "marked": "0.2.10",
+    "supertest": "~0.8.1"
+  },
+  "keywords": [
+    "microjs",
+    "protocol",
+    "buffer",
+    "javascript",
+    "binary",
+    "serialize",
+    "json"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jamespdlynn/microjs.git"
+  },
+  "main": "index",
+  "engines": {
+    "node": ">= 0.8.0"
+  },
+  "readmeFilename": "README.md"
+}
