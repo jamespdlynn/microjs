@@ -1,5 +1,8 @@
 define(function(){
    return {
+
+       UPDATE_INTERVAL : 1000, //milliseconds
+
        Zone : {
            WIDTH :1024,
            HEIGHT : 512
@@ -8,8 +11,7 @@ define(function(){
        Player : {
            SIZE : 25,
            ACCELERATION : 100,
-           DECELERATION : -50,
-           MAX_VELOCITY : 200
+           MAX_VELOCITY : 100
        }
    }
 

@@ -1,11 +1,10 @@
-define(["websocket", "microjs", "model/schemas","model/zone"], function(websocket, micro, schemas, Zone){
+define(["websocket", "microjs", "model/schemas","model/zone","model/constants"], function(websocket, micro, schemas, Zone, Constants){
 
     var WebSocketServer = websocket.server;
 
     //Constants
     var MAX_CONNECTIONS = 10;
     var MAX_PINGS = 5;
-    var UPDATE_INTERVAL = 1000; //milliseconds
     var FAKE_LATENCY = 0; //milliseconds (used for local debugging only)
 
     /**
@@ -117,11 +116,12 @@ define(["websocket", "microjs", "model/schemas","model/zone"], function(websocke
         this.updateInterval = setInterval(function(){
             //Update Zone
             self.zone.update();
-            //Send Zone Data to all connected clients
+
             for (var i=0; i < self.connections.length; i++){
                 send(self.connections[i], "Zone", self.zone.toJSON());
             }
-        },UPDATE_INTERVAL);
+
+        },Constants.UPDATE_INTERVAL);
     };
 
     /**

@@ -38,7 +38,8 @@ define(['backbone','model/constants'],function(Backbone,Constants){
             posX : 0,
             posY : 0,
             angle :0,
-            velocity : 0,
+            velocityX : 0,
+            velocityY : 0,
             isAccelerating : false
         },
 
@@ -90,7 +91,7 @@ define(['backbone','model/constants'],function(Backbone,Constants){
                     if (angle !== data.angle){
 
                         //Update the auxiliary angles and velocities by adding to them the current angle/velocity
-                        if (!attrs.hasOwnProperty("auxiliaryAngles")){
+                        /*  if (!attrs.hasOwnProperty("auxiliaryAngles")){
                             var auxiliaryAngles = data.auxiliaryAngles;
                             var auxiliaryVelocities = data.auxiliaryVelocities;
 
@@ -102,7 +103,7 @@ define(['backbone','model/constants'],function(Backbone,Constants){
                         //Reset the current velocity to 0
                         if (!attrs.hasOwnProperty("velocity")){
                             data.velocity = 0;
-                        }
+                        }  */
 
                         data.angle = changed.angle = angle;
                     }
@@ -136,7 +137,7 @@ define(['backbone','model/constants'],function(Backbone,Constants){
             deltaTime = deltaTime || currentTime-this.lastUpdated;
 
             //Ignore minor updates
-            if (deltaTime < 3){
+            if (deltaTime < 5){
                 return this;
             }
 
@@ -145,64 +146,48 @@ define(['backbone','model/constants'],function(Backbone,Constants){
             //Calculate deltas based on how much time has passed since last update
             var data = this.attributes;
 
-            var acceleration = this.ACCELERATION;
-            var deceleration = this.DECELERATION;
-
-            var newVelocity, distance;
-
-            //Calculate new velocities and distance travelled depending on whether player is accelerating or decelerating
             if (data.isAccelerating){
-                newVelocity = getVelocity(data.velocity, acceleration, deltaTime);
 
-                if (newVelocity > this.MAX_VELOCITY){
+                var newVelocityX = data.velocityX + (Math.cos(data.angle) * this.ACCELERATION * deltaTime);
+                var newVelocityY = data.velocityY + (Math.sin(data.angle) * this.ACCELERATION * deltaTime);
 
-                    newVelocity = this.MAX_VELOCITY;
-                    //calculate the amount of time getting to max velocity, and amount staying at max velocity
-                    var deltaT1 = getTime(data.velocity, newVelocity, acceleration);
-                    var deltaT2 = deltaTime-deltaT1;
-
-                    distance = getDistance(data.velocity, newVelocity, deltaT1)+(deltaT2*newVelocity);
+                var deltaS2 = 0;
+                if (newVelocityX > this.MAX_VELOCITY || newVelocityX < -this.MAX_VELOCITY){
+                    newVelocityX = (newVelocityX > 0) ? this.MAX_VELOCITY : -this.MAX_VELOCITY;
+                    deltaS2 = getTime(data.velocityX, newVelocityX, this.ACCELERATION);
                 }
-                else{
-                    distance = getDistance(data.velocity, newVelocity, deltaTime);
+
+                if (newVelocityY > this.MAX_VELOCITY || newVelocityY < -this.MAX_VELOCITY){
+                    newVelocityY = (newVelocityY > 0) ? this.MAX_VELOCITY : -this.MAX_VELOCITY;
+                    deltaS2 = Math.max(deltaS2, getTime(data.velocityY, newVelocityY, this.ACCELERATION));
                 }
+
+                if (deltaS2){
+                    this.update(deltaS2*1000);
+
+                    deltaTime -= deltaS2;
+                    data.posX +=  newVelocityX * deltaTime;
+                    data.posY +=  newVelocityY * deltaTime;
+
+                }else{
+                    data.posX += getDistance(data.velocityX, newVelocityX, deltaTime);
+                    data.posY += getDistance(data.velocityY, newVelocityY, deltaTime);
+                }
+
+                data.velocityX = newVelocityX;
+                data.velocityY = newVelocityY;
 
             }
             else{
-                newVelocity = getVelocity(data.velocity, deceleration, deltaTime);
-                distance = getDistance(data.velocity, newVelocity, deltaTime);
+                data.posX +=  data.velocityX * deltaTime;
+                data.posY +=  data.velocityY * deltaTime;
             }
 
-            //Update the position arguments based on our current angle
-            if (distance > 0){
-                data.posX += (Math.cos(data.angle) * distance);
-                data.posY += (Math.sin(data.angle) * distance);
+            if (this.easing){
+                data.posX += this.easeX * deltaTime;
+                data.posY += this.easeY * deltaTime;
             }
 
-            data.velocity = newVelocity;
-
-            //Update auxiliary velocities and increment position
-            var i = data.auxiliaryAngles.length-1;
-            do{
-                var angle = data.auxiliaryAngles[i];
-                var velocity = data.auxiliaryVelocities[i];
-
-                if (velocity > 0){
-                    //Auxiliary velocities are always decelerating
-                    newVelocity = getVelocity(velocity, deceleration, deltaTime);
-                    distance = getDistance(velocity, newVelocity, deltaTime);
-
-                    if (distance > 0){
-                        data.posX += (Math.cos(angle) * distance);
-                        data.posY += (Math.sin(angle) * distance);
-                    }
-
-                    data.auxiliaryVelocities[i] = newVelocity;
-                }
-            }while(i--);
-
-            //We need to check that we're still within the boundary of the zone,
-            //and move the player to the opposite end if not
             while (data.posX > this.maxPosX) data.posX -= this.maxPosX;
             while (data.posX < this.radius) data.posX += this.maxPosX;
 
@@ -226,26 +211,25 @@ define(['backbone','model/constants'],function(Backbone,Constants){
 
             this.update();
 
+            var zoneWidth = Constants.Zone.WIDTH;
+            var zoneHeight = Constants.Zone.HEIGHT;
+
             var deltaX = posX - this.get("posX");
-            if (Math.abs(deltaX) > this.ZONE_WIDTH/2){
-                (posX < this.ZONE_WIDTH/2) ? deltaX += this.ZONE_WIDTH : deltaX -= this.ZONE_WIDTH;
+            if (Math.abs(deltaX) > zoneWidth/2){
+                (posX < zoneWidth/2) ? deltaX += zoneWidth : deltaX -= zoneWidth;
             }
 
             var deltaY = posY - this.get("posY");
-            if (Math.abs(deltaY) > this.ZONE_HEIGHT/2){
-                (posY < this.ZONE_HEIGHT/2) ? deltaY += this.ZONE_HEIGHT : deltaY -= this.ZONE_HEIGHT;
+            if (Math.abs(deltaY) > zoneHeight/2){
+                (posY < zoneHeight/2) ? deltaY += zoneHeight : deltaY -= zoneHeight;
             }
 
-            var distance = Math.sqrt((deltaX*deltaX)+(deltaY*deltaY));
+            var interval = Constants.UPDATE_INTERVAL/1000;
+            this.easing = true;
+            this.easeX = deltaX / interval;
+            this.easeY = deltaY / interval;
 
-            if (distance > this.radius){
-
-                var data = this.attributes;
-                data.auxiliaryAngles[1] = Math.atan2(deltaY, deltaX).toPrecision(1);
-                data.auxiliaryVelocities[1] = Math.sqrt(-2*this.DECELERATION*distance);
-
-                return this;
-            }
+            return this;
         }
     }).extend(Constants.Player);
 
@@ -261,7 +245,7 @@ define(['backbone','model/constants'],function(Backbone,Constants){
     }
 
     function getTime(vi, vf, a){
-        return (vf-vi)/a;
+        return Math.abs((vf-vi)/a);
     }
 
     function addAngles (a1, v1, a2, v2){

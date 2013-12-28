@@ -43,6 +43,8 @@ define(['model/zone'],function(Zone){
         canvas.addEventListener('mouseup', onMouseUp);
         canvas.addEventListener('mouseout', onMouseUp);
 
+        currentAngle = gameData.player.get("angle");
+
         onFrame();   //Start Game Loop
     }
 
@@ -63,10 +65,7 @@ define(['model/zone'],function(Zone){
 
         //Every ten frames trigger a player update
         if (++frameCount >= 10){
-            if (currentAngle){
-                gameData.trigger("change:player", {angle:currentAngle, isAccelerating:mouseDown});
-                currentAngle = undefined;
-            }
+            gameData.trigger("change:player", {angle:currentAngle, isAccelerating:mouseDown});
             frameCount = 0;
         }
 
@@ -109,8 +108,8 @@ define(['model/zone'],function(Zone){
         context.fillText("PosX: "+Math.round(data.posX), 10, canvas.height-100);
         context.fillText("PosY: "+Math.round(data.posY), 10, canvas.height-80);
         context.fillText("Angle: "+data.angle, 10, canvas.height-60);
-        context.fillText("Velocity: "+Math.round(data.velocity), 10, canvas.height-40);
-        context.fillText("Auxiliary Angles: "+JSON.stringify(data.auxiliaryAngles), 10, canvas.height-20);
+        context.fillText("VelocityX: "+Math.round(data.velocityX), 10, canvas.height-40);
+        context.fillText("VelocityY: "+Math.round(data.velocityY), 10, canvas.height-20);
     }
 
 
@@ -147,13 +146,13 @@ define(['model/zone'],function(Zone){
         var display = player.display = (player.display || {angle : data.angle, radius : player.SIZE/2});
 
         //For user player use unofficial 'currentAngle' if available, rather than their data angle
-        var angle = (isUser && currentAngle) ? currentAngle : data.angle;
+        var angle = isUser ? currentAngle : data.angle;
 
         //Smooth angle changes, by incrementing them in steps
         if (display.angle != angle){
             var deltaAngle = angleDiff(angle, display.angle);
             if (deltaAngle > 0.1){
-                var step = deltaAngle > 0.3 ? deltaAngle/6 : 0.05;
+                var step = deltaAngle > 0.2 ? deltaAngle/4 : 0.05;
                 if (angleDiff(angle, display.angle+step) < deltaAngle){
                     display.angle += step;
                 }else{
