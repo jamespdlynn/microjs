@@ -44,11 +44,6 @@ define(['backbone','model/constants'],function(Backbone,Constants){
         },
 
         initialize : function(){
-
-            //Set the auxiliary array defaults in the initializer not the prototype (otherwise we would be sharing references)
-            this.attributes.auxiliaryAngles = this.attributes.auxiliaryAngles || [0];
-            this.attributes.auxiliaryVelocities = this.attributes.auxiliaryVelocities ||  [0];
-
             //Helper variables
             this.radius = this.SIZE/2;
             this.maxPosX =  Constants.Zone.WIDTH+this.radius;
@@ -82,31 +77,8 @@ define(['backbone','model/constants'],function(Backbone,Constants){
             //Loop through the new object and set new attributes on the player
 
             for (var key in attrs){
-
-                //If this set call includes an angle change, do some additional logic
                 if (key === "angle"){
-
-                    var angle = attrs[key].toPrecision(1);
-
-                    if (angle !== data.angle){
-
-                        //Update the auxiliary angles and velocities by adding to them the current angle/velocity
-                        /*  if (!attrs.hasOwnProperty("auxiliaryAngles")){
-                            var auxiliaryAngles = data.auxiliaryAngles;
-                            var auxiliaryVelocities = data.auxiliaryVelocities;
-
-                            var auxiliaryData = addAngles(data.angle, data.velocity, auxiliaryAngles[0], auxiliaryVelocities[0]);
-                            auxiliaryAngles[0] = auxiliaryData.angle;
-                            auxiliaryVelocities[0] = auxiliaryData.velocity;
-                        }
-
-                        //Reset the current velocity to 0
-                        if (!attrs.hasOwnProperty("velocity")){
-                            data.velocity = 0;
-                        }  */
-
-                        data.angle = changed.angle = angle;
-                    }
+                    attrs[key] = attrs[key].toPrecision(1);
                 }
                 else if (data[key] !== attrs[key]){
                     //Ignore position changes if easing boolean is passed through options
@@ -236,10 +208,6 @@ define(['backbone','model/constants'],function(Backbone,Constants){
 
     //Private helper functions
 
-    function getVelocity(vi,a,t){
-        return Math.max(vi + (a*t),0);
-    }
-
     function getDistance(vi, vf, t){
         return ((vi+vf)/2)*t;
     }
@@ -248,23 +216,6 @@ define(['backbone','model/constants'],function(Backbone,Constants){
         return Math.abs((vf-vi)/a);
     }
 
-    function addAngles (a1, v1, a2, v2){
-        if (v1 == 0){
-            return {angle:a2, velocity:v2}
-        }
-
-        if (v2 == 0){
-            return {angle:a1, velocity:v1}
-        }
-
-        var velocityX = (Math.cos(a1) * v1) + (Math.cos(a2) * v2);
-        var velocityY = (Math.sin(a1) * v1) + (Math.sin(a2) * v2);
-
-        var angle= Math.atan2(velocityY, velocityX).toPrecision(1);
-        var velocity =  Math.sqrt((velocityX*velocityX)+(velocityY*velocityY));
-
-        return {angle:angle, velocity:velocity};
-    }
 
 
     return Player;
