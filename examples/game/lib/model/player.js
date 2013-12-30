@@ -77,10 +77,12 @@ define(['backbone','model/constants'],function(Backbone,Constants){
             //Loop through the new object and set new attributes on the player
 
             for (var key in attrs){
+
                 if (key === "angle"){
                     attrs[key] = attrs[key].toPrecision(1);
                 }
-                else if (data[key] !== attrs[key]){
+
+                if (data[key] !== attrs[key]){
                     //Ignore position changes if easing boolean is passed through options
                     if (!options.easing || (key !== "posX" && key !== "posY")){
                         data[key] = changed[key] = attrs[key];

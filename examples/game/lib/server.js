@@ -210,6 +210,7 @@ define(["websocket", "microjs", "model/schemas","model/zone","model/constants"],
                            else if (numPings == MAX_PINGS){
                                //Calculate this connections average latency and send it to the client
                                data.latency = calculateLatency(data.timestamps);
+                               console.log(data.latency);
                                ping(data);
 
                                //If we haven't initialized yet, add this connection to the server zone
