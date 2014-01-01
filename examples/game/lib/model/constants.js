@@ -1,18 +1,19 @@
 define(function(){
-   return {
+    return {
 
-       UPDATE_INTERVAL : 1000, //milliseconds
+        UPDATE_INTERVAL : 1000, //milliseconds
 
-       Zone : {
-           WIDTH :1024,
-           HEIGHT : 512
-       },
+        Zone : {
+            WIDTH :1024,
+            HEIGHT : 512
+        },
 
-       Player : {
-           SIZE : 25,
-           ACCELERATION : 100,
-           MAX_VELOCITY : 100
-       }
-   }
+        Player : {
+            SIZE : 25,
+            ACCELERATION : 100,
+            MAX_VELOCITY_X : 100,
+            MAX_VELOCITY_Y : 100
+        }
+    }
 
 });
