@@ -127,11 +127,11 @@ define(['backbone','model/constants'],function(Backbone,Constants){
             var maxPosX =  Constants.Zone.WIDTH+radius;
             var maxPosY =  Constants.Zone.HEIGHT+radius;
 
-            while (data.posX > maxPosX) data.posX -= maxPosX;
-            while (data.posX < radius) data.posX += maxPosX;
+            while (data.posX > maxPosX) data.posX -= maxPosX+radius;
+            while (data.posX < -radius) data.posX += maxPosX+radius;
 
-            while (data.posY > maxPosY) data.posY -= maxPosY;
-            while (data.posY < radius) data.posY += maxPosY;
+            while (data.posY > maxPosY) data.posY -= maxPosY+radius;
+            while (data.posY < -radius) data.posY += maxPosY+radius;
 
             //Update last updated timestamp
             this.lastUpdated = currentTime;
