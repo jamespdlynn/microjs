@@ -74,14 +74,14 @@ define(["websocket", "microjs", "model/schemas","model/zone","model/constants"],
      */
     ServerZone.prototype.remove = function(conn){
 
-       this.zone.players.remove(conn.id);
-       this.connections.splice(this.connections.indexOf(conn), 1);
+        this.zone.players.remove(conn.id);
+        this.connections.splice(this.connections.indexOf(conn), 1);
 
-       //If no more connections, stop the update loop
-       if (this.connections.length == 0){
-           this.stopUpdateLoop();
-       }
-       return conn.id;
+        //If no more connections, stop the update loop
+        if (this.connections.length == 0){
+            this.stopUpdateLoop();
+        }
+        return conn.id;
     };
 
     /**
@@ -135,113 +135,114 @@ define(["websocket", "microjs", "model/schemas","model/zone","model/constants"],
 
     return {
 
-       run : function(httpServer){
+        run : function(httpServer){
 
-           //Register our schemas
-           micro.register(schemas);
+            //Register our schemas
+            micro.register(schemas);
 
-           //Create a new ServerZone instance
-           var serverZone = new ServerZone();
+            //Create a new ServerZone instance
+            var serverZone = new ServerZone();
 
-           //Create a new WebsocketServer Instance
-           var wsServer = new WebSocketServer({
-               httpServer: httpServer,
-               autoAcceptConnections: false
-           });
+            //Create a new WebsocketServer Instance
+            var wsServer = new WebSocketServer({
+                httpServer: httpServer,
+                autoAcceptConnections: false
+            });
 
-           //When a new connection request is received from a client
-           wsServer.on("request", function(request){
+            //When a new connection request is received from a client
+            wsServer.on("request", function(request){
 
-               //Make sure we haven't exceeded our maximum number of connections
-               if (serverZone.connections.length >= MAX_CONNECTIONS){
-                   request.reject(403, "Max number of connections reached");
-                   return;
-               }
+                //Make sure we haven't exceeded our maximum number of connections
+                if (serverZone.connections.length >= MAX_CONNECTIONS){
+                    request.reject(403, "Max number of connections reached");
+                    return;
+                }
 
-               //Accept the connection
-               var connection =  request.accept("microjs", request.origin);
-               //Keep track of whether this connection has been added to our server zone
-               var initialized = false;
+                //Accept the connection
+                var connection =  request.accept("microjs", request.origin);
+                //Keep track of whether this connection has been added to our server zone
+                var initialized = false;
 
-               //When a data packet is received from the client
-               connection.on("message", function(msg) {
+                //When a data packet is received from the client
+                connection.on("message", function(msg) {
 
-                   if (msg.type !== "binary") return;
+                    if (msg.type !== "binary") return;
 
-                   //try{
-                      if (FAKE_LATENCY){
-                          setTimeout(function(){
-                             readData(msg.binaryData);
-                          }, FAKE_LATENCY);
-                      }else{
-                          readData(msg.binaryData);
-                      }
-                   //}
-                   //catch(e){
-                      //console.warn("Unable to parse binary data: "+ e.message);
-                   //}
-               });
+                    //try{
+                    if (FAKE_LATENCY){
+                        setTimeout(function(){
+                            readData(msg.binaryData);
+                        }, FAKE_LATENCY);
+                    }else{
+                        readData(msg.binaryData);
+                    }
+                    //}
+                    //catch(e){
+                    //console.warn("Unable to parse binary data: "+ e.message);
+                    //}
+                });
 
-               //When the client terminated the websocket connections
-               connection.on("close", function(){
-                   if (initialized){
-                       serverZone.remove(connection);
-                   }
-                   connection = undefined;
-               });
+                //When the client terminated the websocket connections
+                connection.on("close", function(){
+                    if (initialized){
+                        serverZone.remove(connection);
+                    }
+                    connection = undefined;
+                });
 
-               //Parse client sent binary data buffer
-               var readData = function(buffer){
+                //Parse client sent binary data buffer
+                var readData = function(buffer){
 
-                   //Deserialize binary data into a JSON object
-                   var data = micro.toJSON(buffer);
-                   var type = data._type;
-                   delete data._type;
+                    //Deserialize binary data into a JSON object
+                    var data = micro.toJSON(buffer);
+                    var type = data._type;
+                    delete data._type;
 
-                   switch (type)
-                   {
-                       case "Ping" :
-                           var numPings = data.timestamps.length;
+                    switch (type)
+                    {
+                        case "Ping" :
+                            var numPings = data.timestamps.length;
 
-                           //Ping a minimum of number of times, before calculating the latency
-                           if (numPings < MAX_PINGS){
-                               ping(data);
-                           }
-                           else if (numPings == MAX_PINGS){
-                               //Calculate this connections average latency and send it to the client
-                               data.latency = calculateLatency(data.timestamps);
-                               ping(data);
+                            //Ping a minimum of number of times, before calculating the latency
+                            if (numPings < MAX_PINGS){
+                                ping(data);
+                            }
+                            else if (numPings == MAX_PINGS){
+                                //Calculate this connections average latency and send it to the client
+                                data.latency = calculateLatency(data.timestamps);
+                                console.log(data.latency);
+                                ping(data);
 
-                               //If we haven't initialized yet, add this connection to the server zone
-                               if (!initialized){
-                                   serverZone.add(connection);
-                                   initialized = true;
-                               }
-                           }
+                                //If we haven't initialized yet, add this connection to the server zone
+                                if (!initialized){
+                                    serverZone.add(connection);
+                                    initialized = true;
+                                }
+                            }
 
-                           break;
+                            break;
 
-                       case "PlayerUpdate":
-                           //Set the player update id to the connection id to prevent clients from updating other players
-                           data.id = connection.id;
-                           serverZone.updatePlayer(data);
-                           break;
+                        case "PlayerUpdate":
+                            //Set the player update id to the connection id to prevent clients from updating other players
+                            data.id = connection.id;
+                            serverZone.updatePlayer(data);
+                            break;
 
-                       default:
-                           console.warn("Unexpected Schema Type Received: "+type);
-                           break;
-                   }
-               };
+                        default:
+                            console.warn("Unexpected Schema Type Received: "+type);
+                            break;
+                    }
+                };
 
-               //Kick off the connection by pinging the client
-               var ping = function(data){
-                   data = data || {timestamps:[]};
-                   data.timestamps.push(new Date().getTime());
-                   send(connection, "Ping", data);
-               };
+                //Kick off the connection by pinging the client
+                var ping = function(data){
+                    data = data || {timestamps:[]};
+                    data.timestamps.push(new Date().getTime());
+                    send(connection, "Ping", data);
+                };
 
-               ping();
-           });
+                ping();
+            });
 
         }
     };
@@ -257,15 +258,15 @@ define(["websocket", "microjs", "model/schemas","model/zone","model/constants"],
      */
     function send(conn,schemaName,json,byteLength){
 
-      var buffer = micro.toBinary(json, schemaName,byteLength);
+        var buffer = micro.toBinary(json, schemaName,byteLength);
 
-      if (FAKE_LATENCY){
-          setTimeout(function(){
-              conn.sendBytes(buffer);
-          },FAKE_LATENCY);
-      }else{
-         conn.sendBytes(buffer);
-      }
+        if (FAKE_LATENCY){
+            setTimeout(function(){
+                conn.sendBytes(buffer);
+            },FAKE_LATENCY);
+        }else{
+            conn.sendBytes(buffer);
+        }
     }
 
 

@@ -38,7 +38,7 @@ requirejs.optimize({
         },
         findNestedDependencies : true,
         out : path.join(__dirname, "/public/main.js"),
-        optimize : 'uglify2'
+        optimize : 'uglify2' //set to none when debugging client
     },
 
     function(buildResponse){

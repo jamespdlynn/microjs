@@ -1,37 +1,5 @@
 define(['backbone','model/constants'],function(Backbone,Constants){
 
-    /**
-     * Helper function for rounding to decimal precision
-     * @param precision
-     * @returns {number}
-     */
-    Number.prototype.toPrecision = function(precision){
-        var multiplier = Math.pow(10, precision);
-        return  Math.round(this * multiplier) /multiplier;
-    };
-
-    //We can cheat and save performance by caching values into our sine and cosine functions
-    //as we are only using a limited number of angles to calculate with
-    var sin = Math.sin, cos = Math.cos;
-    var sines = {};
-    for (var i=-Math.PI; i < Math.PI; i+=0.1){
-        i = i.toPrecision(1);
-        sines[i] = sin(i);
-    }
-    Math.sin = function(val){
-        return sines[val] || sin(val);
-    };
-
-    var cosines = {};
-    for (var j=-Math.PI; j <= Math.PI; j+=0.1){
-        j = j.toPrecision(1);
-        cosines[j] = cos(j);
-    }
-    Math.cos = function(val){
-        return cosines[val] || cos(val);
-    };
-
-
     var Player = Backbone.Model.extend({
 
         defaults : {
@@ -44,11 +12,6 @@ define(['backbone','model/constants'],function(Backbone,Constants){
         },
 
         initialize : function(){
-            //Helper variables
-            this.radius = this.SIZE/2;
-            this.maxPosX =  Constants.Zone.WIDTH+this.radius;
-            this.maxPosY =  Constants.Zone.HEIGHT+this.radius;
-
             this.intialized = true;
             this.lastUpdated = new Date().getTime();  //Internal timestamp of last update
         },
@@ -74,13 +37,17 @@ define(['backbone','model/constants'],function(Backbone,Constants){
             var changed = {};
             var data = this.attributes;
 
-            //Loop through the new object and set new attributes on the player
 
+            this.update();
+
+            //Loop through the new object and set new attributes on the player
             for (var key in attrs){
+
                 if (key === "angle"){
                     attrs[key] = attrs[key].toPrecision(1);
                 }
-                else if (data[key] !== attrs[key]){
+
+                if (data[key] !== attrs[key]){
                     //Ignore position changes if easing boolean is passed through options
                     if (!options.easing || (key !== "posX" && key !== "posY")){
                         data[key] = changed[key] = attrs[key];
@@ -120,51 +87,51 @@ define(['backbone','model/constants'],function(Backbone,Constants){
 
             if (data.isAccelerating){
 
-                var newVelocityX = data.velocityX + (Math.cos(data.angle) * this.ACCELERATION * deltaTime);
-                var newVelocityY = data.velocityY + (Math.sin(data.angle) * this.ACCELERATION * deltaTime);
+                var deltaVelocity = this.ACCELERATION * deltaTime;
+                var deltaTime1 = 0;
 
-                var deltaS2 = 0;
-                if (newVelocityX > this.MAX_VELOCITY || newVelocityX < -this.MAX_VELOCITY){
-                    newVelocityX = (newVelocityX > 0) ? this.MAX_VELOCITY : -this.MAX_VELOCITY;
-                    deltaS2 = getTime(data.velocityX, newVelocityX, this.ACCELERATION);
+                //Calculate new velocities
+                var newVelocityX = data.velocityX + (Math.cos(data.angle) * deltaVelocity);
+                var newVelocityY = data.velocityY + (Math.sin(data.angle) * deltaVelocity);
+
+                //If velocities exceed maximums, we have to do some additional logic to calculate new positions
+                if (newVelocityX > this.MAX_VELOCITY_X || newVelocityX < -this.MAX_VELOCITY_X){
+                    newVelocityX = (newVelocityX > 0) ? this.MAX_VELOCITY_X : -this.MAX_VELOCITY_X;
+
+                    deltaTime1 = getTime(data.velocityX, newVelocityX, this.ACCELERATION);
+                    data.posX += getDistance(data.velocityX, newVelocityX, deltaTime1) + (newVelocityX*(deltaTime-deltaTime1));
                 }
-
-                if (newVelocityY > this.MAX_VELOCITY || newVelocityY < -this.MAX_VELOCITY){
-                    newVelocityY = (newVelocityY > 0) ? this.MAX_VELOCITY : -this.MAX_VELOCITY;
-                    deltaS2 = Math.max(deltaS2, getTime(data.velocityY, newVelocityY, this.ACCELERATION));
-                }
-
-                if (deltaS2){
-                    this.update(deltaS2*1000);
-
-                    deltaTime -= deltaS2;
-                    data.posX +=  newVelocityX * deltaTime;
-                    data.posY +=  newVelocityY * deltaTime;
-
-                }else{
+                else{
                     data.posX += getDistance(data.velocityX, newVelocityX, deltaTime);
+                }
+
+                if (newVelocityY > this.MAX_VELOCITY_Y || newVelocityY < -this.MAX_VELOCITY_Y){
+                    newVelocityY = (newVelocityY > 0) ? this.MAX_VELOCITY_Y : -this.MAX_VELOCITY_Y;
+
+                    deltaTime1 = getTime(data.velocityY, newVelocityY, this.ACCELERATION);
+                    data.posY += getDistance(data.velocityY, newVelocityY, deltaTime1) + (newVelocityY*(deltaTime-deltaTime1));
+                }else{
                     data.posY += getDistance(data.velocityY, newVelocityY, deltaTime);
                 }
 
                 data.velocityX = newVelocityX;
                 data.velocityY = newVelocityY;
-
             }
             else{
                 data.posX +=  data.velocityX * deltaTime;
                 data.posY +=  data.velocityY * deltaTime;
             }
 
-            if (this.easing){
-                data.posX += this.easeX * deltaTime;
-                data.posY += this.easeY * deltaTime;
-            }
+            //Check to see if player has exceeded zone boundary, in which case send them to opposite side
+            var radius = this.SIZE/2;
+            var maxPosX =  Constants.Zone.WIDTH+radius;
+            var maxPosY =  Constants.Zone.HEIGHT+radius;
 
-            while (data.posX > this.maxPosX) data.posX -= this.maxPosX;
-            while (data.posX < this.radius) data.posX += this.maxPosX;
+            while (data.posX > maxPosX) data.posX -= maxPosX+radius;
+            while (data.posX < -radius) data.posX += maxPosX+radius;
 
-            while (data.posY > this.maxPosY) data.posY -= this.maxPosY;
-            while (data.posY < this.radius) data.posY += this.maxPosY;
+            while (data.posY > maxPosY) data.posY -= maxPosY+radius;
+            while (data.posY < -radius) data.posY += maxPosY+radius;
 
             //Update last updated timestamp
             this.lastUpdated = currentTime;
@@ -181,8 +148,7 @@ define(['backbone','model/constants'],function(Backbone,Constants){
          */
         ease : function(posX, posY){
 
-            this.update();
-
+            //Calculate the position deltas while account for zone boundaries
             var zoneWidth = Constants.Zone.WIDTH;
             var zoneHeight = Constants.Zone.HEIGHT;
 
@@ -196,10 +162,16 @@ define(['backbone','model/constants'],function(Backbone,Constants){
                 (posY < zoneHeight/2) ? deltaY += zoneHeight : deltaY -= zoneHeight;
             }
 
+            var data = this.attributes;
+
+            //Update the velocities to move to the correct position by the next update
             var interval = Constants.UPDATE_INTERVAL/1000;
-            this.easing = true;
-            this.easeX = deltaX / interval;
-            this.easeY = deltaY / interval;
+            data.velocityX += deltaX / interval;
+            data.velocityY += deltaY / interval;
+
+            //If these changes take us over the maximum velocities, update the constants to allow for it
+            this.MAX_VELOCITY_X = Math.max(data.velocityX, Constants.Player.MAX_VELOCITY_X);
+            this.MAX_VELOCITY_Y = Math.max(data.velocityY, Constants.Player.MAX_VELOCITY_Y);
 
             return this;
         }
@@ -216,6 +188,36 @@ define(['backbone','model/constants'],function(Backbone,Constants){
         return Math.abs((vf-vi)/a);
     }
 
+    /**
+     * Helper function for rounding to decimal precision
+     * @param precision
+     * @returns {number}
+     */
+    Number.prototype.toPrecision = function(precision){
+        var multiplier = Math.pow(10, precision);
+        return  Math.round(this * multiplier) /multiplier;
+    };
+
+    //We can cheat and save performance by caching values into our sine and cosine functions
+    //as we are only using a limited number of angles to calculate with
+    var sin = Math.sin, cos = Math.cos;
+    var sines = {};
+    for (var i=-Math.PI; i < Math.PI; i+=0.1){
+        i = i.toPrecision(1);
+        sines[i] = sin(i);
+    }
+    Math.sin = function(val){
+        return sines[val] || sin(val);
+    };
+
+    var cosines = {};
+    for (var j=-Math.PI; j <= Math.PI; j+=0.1){
+        j = j.toPrecision(1);
+        cosines[j] = cos(j);
+    }
+    Math.cos = function(val){
+        return cosines[val] || cos(val);
+    };
 
 
     return Player;
