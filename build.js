@@ -5,7 +5,7 @@ var compressor = require('node-minify');
 new compressor.minify({
     type: 'gcc',
     fileIn: 'lib/micro.js',
-    fileOut: 'bin/micro.js',
+    fileOut: 'dist/micro.js',
     callback: function(err){
         if (err){
             console.log(err);
@@ -18,7 +18,7 @@ new compressor.minify({
 new compressor.minify({
     type: 'gcc',
     fileIn: 'lib/browser-buffer.js',
-    fileOut: 'bin/browser-buffer.js',
+    fileOut: 'dist/browser-buffer.js',
     callback: function(err){
         if (err){
             console.log(err);
