@@ -1,7 +1,7 @@
 {
   "name": "microjs",
   "description": "Binary protocol buffer for javascript",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "author": {
     "name": "James Lynn",
     "email": "james.lynn@aristobotgames.com"
