@@ -40,8 +40,8 @@
     exports.testRegisterSchema = function(test){
 
         test.doesNotThrow(function(){
-            micro.register(integerSchema,"Integer",false);
-            micro.register(floatSchema,"Float", false);
+            micro.register(integerSchema,"Integer",{serializeType:false});
+            micro.register(floatSchema,"Float", {serializeType:false});
 
             test.ok(micro.getSchema("Integer"), "Integer schema found");
             test.ok(micro.getSchema("Float"), "Float schema found");

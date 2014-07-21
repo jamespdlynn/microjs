@@ -21,7 +21,7 @@
     exports.testRegisterSchema = function(test){
 
         test.doesNotThrow(function(){
-            micro.register(enumSchema,"Enum",false);
+            micro.register(enumSchema,"Enum",{serializeType:false});
             test.ok(micro.getSchema("Enum"), "Enum schema found");
         });
 
@@ -57,7 +57,7 @@
         enumData = {style:"invalid"};
 
         test.doesNotThrow(function(){
-            micro.register(enumSchema,"Enum",false);
+            micro.register(enumSchema,"Enum",{serializeType:false});
             enumBuffer = micro.toBinary(enumData,"Enum");
             test.equals(enumBuffer.length, 2, "Default Enum buffer has correct length");
 

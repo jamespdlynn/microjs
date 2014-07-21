@@ -25,7 +25,7 @@
     exports.testRegisterSchema = function(test){
 
         test.doesNotThrow(function(){
-            micro.register(booleanSchema,"Boolean",false);
+            micro.register(booleanSchema,"Boolean",{serializeType:false});
 
             var newSchema = micro.getSchema("Boolean");
 

@@ -23,7 +23,7 @@
     exports.testRegisterSchema = function(test){
 
         test.doesNotThrow(function(){
-            micro.register(stringSchema,"String",false);
+            micro.register(stringSchema,"String",{serializeType:false});
             test.ok(micro.getSchema("String"), "String schema found");
         });
 

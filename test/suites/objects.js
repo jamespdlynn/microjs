@@ -56,7 +56,7 @@
     exports.testRegisterSchema = function(test){
 
         test.doesNotThrow(function(){
-            micro.register(objectSchema,"Object",false);
+            micro.register(objectSchema,"Object",{serializeType:false});
             test.ok(micro.getSchema("Object"), "Object schema not found");
         });
 
@@ -100,7 +100,7 @@
 
         test.doesNotThrow(function(){
 
-            micro.register(objectSchema, "Object", false);
+            micro.register(objectSchema, "Object", {serializeType:false});
 
             objectBuffer = micro.toBinary(objectData,"Object");
             test.equals(objectBuffer.length, 4, "Partial Object buffer has incorrect length");
