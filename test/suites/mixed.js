@@ -6,6 +6,14 @@
     var exports = {};
 
     var schemas = {
+
+        Passenger : {
+            name : "string",
+            age : "uint8",
+            isMale : "boolean",
+            isDriver : "boolean"
+        },
+
         Car : {
             make : "string",
             model : "string",
@@ -20,14 +28,9 @@
                 byteLength:2
             },
             passengers : [{type:"object", schema:"Passenger"}]
-        },
-
-        Passenger : {
-            name : "string",
-            age : "uint8",
-            isMale : "boolean",
-            isDriver : "boolean"
         }
+
+
     };
 
     //39 bytes
